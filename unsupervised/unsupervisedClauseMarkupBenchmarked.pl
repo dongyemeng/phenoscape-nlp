@@ -1,126 +1,81 @@
-#Nov. 17 2008
-#This version output GraphML for generation of visualization among organs and sub-organs.
-#This version also assemble marked clauses into description documents and dump them to disk
-#This version uses extra parameters
-#This version output raw marked-up clauses with "unknown" tag.
-#Newer development of unsupervised clause markup is done on unsupervisedClauseMarkupBenchmarked.pl
-#The latter implements some additional new or replacement module to achieve ideas discussed in the FNAv19BenchmarkDocumentation.doc
+####################################################################################################
+###############      Debug variables used by Dongye Meng
+#TODO: Debug variables used by Dongye Meng
+my $debug = 0; #debug learning process
+my $debug_trace = 0;
 
-#July 28, 2011 Hong Cui How to create KB from checked wordroles and glossaryfixed tables
-#execute following sql statements: [note, learnedmodifier will be empty]
-#create table fnaknowledgebase.learnedstructures
-#SELECT word as structure FROM annotationevaluation.fnav19_wordroles f where semanticrole in ('op', 'os');
-#
-#create table fnaknowledgebase.learnedboundarywords
-#SELECT word FROM annotationevaluation.fnav19_wordroles f where semanticrole in ('c');
-#
-#create table fnaknowledgebase.learnedmodifiers
-#SELECT word as modifier FROM annotationevaluation.fnav19_wordroles f where semanticrole in ('m');
-#
-#insert into fnaknowledgebase.learnedstructures (structure)
-#select term from annotationevaluation.fnaglossaryfixed where category in ('STRUCTURE', 'FEATURE', 'SUBSTANCE', 'PLANT', 'nominative', 'life_style') 
-#and term not in (select structure from fnaknowledgebase.learnedstructures);
-#
-#insert into fnaknowledgebase.learnedboundarywords (word)
-#select term from annotationevaluation.fnaglossaryfixed where category not in ('STRUCTURE', 'FEATURE', 'SUBSTANCE', 'PLANT', 'nominative', 'life_style') 
-#and term not in (select word from fnaknowledgebase.learnedboundarywords);
+my $use_fna2_v19_jing_sentence = 0;
+my $use_limit = 2000;
 
+my $populatesent_debug=0;
+my $tokenize_debug=0;
+my $getfirstnwords_debug = 0;
+my $getallwords_debug=0;
+my $populatesent_type_debug=0;
+my $populateunknownwordstable_debug=0;
 
+my $addheuristicsnouns_debug=0;
+my $characterHeuristics_debug=0;
+my $addDescriptors_debug=0;
 
+my $addstopwords_debug=0;
+my $addcharacters_debug=0;
+my $addnumbers_debug=0;
+my $addclusterstrings_debug=0;
+my $addpropernouns_debug=0;
 
+my $checkWN_debug = 0; 
+my $getnumber_debug = 0;
+my $getplural_debug = 0;
 
-#Nov 10, 2008 Hong Cui
-#TODO:  Done: de-hypenization for documents (done in java)
-#		2) identify common-substructures such as blades, base, etc. See also 5)
-#	    0) Determine when a syntactic modifier is a type modifier: when "modifier+structure" is the subject of a clause, not a phrase clause.
-#			0.0: need first to identify "type modifier as subjects" : such as inner, outer, basal, etc. /bootstrap/
-#           In v19, 12 of the 100 unique modifiers also are also boundary words, including basal, cauline, pistillate, staminate, bisexaul etc.
-#           "Modifier + boundary word" pattern can be used to identify such modifiers
-#       1) deal with unknown words:
-#			make use of word morphology to tag unknown words: oval, suboval, to expand modifiers, boundaries, or structures
-#				Prefixes: "deca", "di", "dodeca", "e", "hexa", "infra", "inter", "macro", "mega", "meso", "micro", "mono", "multi", "ob", "octo", "penta", "poly", "ptero", "quadri", "quinque", "semi", "sub", "syn", "tetra", "tri", "uni", "xero";
-# 				Suffix: "-merous"
+my $plural_debug = 0;
+my $singular_debug = 0;
 
-#      		make use of word semantics (antonyms) to tag unknown words:  inner vs. outer; staminate vs. pistillate; abaxial vs adaxial;
+my $update_debug = 0;
+my $processnewword_debug = 0;
+my $changePOS_debug = 0;
+my $markknown_debug = 0;
+my $updatepos_debug = 0;
+my $resolveconflicts_debug = 0;
+my $getparentsentencetag_debug = 0;
+my $tagsentwmt_debug = 0;
+my $mergerole_debug=0;
 
-#		3)"of" clauses:sub-part of part, but not part of sub-part, part of count, clausters of part. May need to look into (information).
-#       3) "and/or" clauses: noun and/or noun, except stentences starting with "and/or"
+my $posbysuffix_debug = 0;
+my $containsuffix_debug = 0;
+my $markupignore_debug = 0;
 
-#"unknown" tagged clauses not starting with a noun phrase:
-#	    4) "ditto" clauses: unknown sentences starting with "boundary words" not followed by organ names before a punctuation mark => ditto
-#       4) "adjective modifier subject" clauses: sentence starting with a "modifier" such as inner followed by a boundry word, infer a structure from context.
-#		4) phrase clauses: sentence ends with a structure name.
+my $discover_debug = 1;
+my $buildpattern_debug = 0;
+my $matchpattern_debug = 0;
+my $rulebasedlearn_debug = 1;
 
-#		5)"common sub-structure" clause: first identify those structures. Then use the context to infer its modifier (sub-part of part)
+#doit
+my $doit_debug = 0;
+my $followedbyn_debug = 0;
+my $getPOSptn_debug = 0;
+my $updatenn_debug = 0;
+my $getNounsAfterPtn_debug = 0;
 
+#tag
+my $tag_debug = 0;
 
-# March 5, 2009
-# changes made for Treatise part H
-# 1) valves =>singular=> valve: different tag 2868 => 2801
-# 2) doit{} patterns [psn][psn], [?b]bn/b[?b]n, ends with n, check pos of words following: different tag 2801 =>2715
-# 3) doit{} process [bbs] pattern: [elongate ventral muscle] field with diductors close 2715=>2622
+my $wordpos_debug = 0;
+my $addsingularpluralpair_debug = 0;
 
-# March 6, 2009
-# deal with "x with y" in a postprocess module
-# add "no" to stop list.
+#additionalbootstrapping
+my $additionalbootstrapping_debug = 0;
+my $oneleadwordmarkup_debug = 0;
+my $doitmarkup_debug = 0;
+my $wrapupmarkup_debug = 0;
 
-# March 11, 2009
-# leads stops after a proposition
-# disable adject_subject and common_substructure: 2622=>2425 (discount ditto and and/or tags: 773)
+#unknownwordbootstrapping
+my $unknownwordbootstrapping_debug = 0;
+my $tagallsentences_debug = 0;
+my $knowntags_debug = 0;
 
-# March 12, 2009
-# add $NUMBERS to stoplist (b words)
-# take andor out of adj-subj bootstrapping to the main bootstrapping (andor 104 => 63, still has problems)
-# in checkWN, take into account $PREFIX, -ed
-# tightened up criteria in [?(b)] [different tags: 766]
-# disable 'fixxwithy'
+####################################################################################################
 
-# Mrach 15, 2009
-# relax/remove 2 "not main role" conditions in doit{}
-
-# March 21, 2009
-# a number of small fixes.
-# markupignore()
-# switch the order of ditto and phraseclause
-# relaxed phraseclause condition
-
-# March 24, 2009
-# finalizeignore: raw mark of markupignore gets finalized in finalizeignore
-# add $CHARACTER characters to b list
-
-# March 26, 2009
-# takes R0, R1, and R2 out of remainnulltag() and put in the new markup subroutine.
-
-# March 28, 2009
-# add commaand()
-
-# March 29, 2009
-# add finalizemodifiers(), to be tested
-
-
-# April 07, 2009
-# modified ?b in doit
-# add adjsverification() : tested
-
-# April 11, 2009
-# fix problems seen in test18
-# addnumbers() to "b" list
-
-#...
-
-
-# April 26, 2009
-# normalize modifiers with and/or/plus
-
-#...
-
-# May 1, 2009
-# add nor to and|or
-
-#...
-
-#use lib 'C:\\Documents and Settings\\hongcui\\Desktop\\WordNov2009\\FNAParser\\Unsupervised\\';
-#use lib '..\\Unsupervised\\';
 use lib '../Unsupervised/';
 use NounHeuristics;
 use InitialMarkup;
@@ -129,30 +84,11 @@ use ReadFile;
 use strict;
 use DBI;
 
-#commandline:
-#perl unsupervisedClauseMarkupBenchmarked.pl D:\SMART RA\Work Folders\FOC-v7\target\descriptions(convert the xlsx file into a text file and put it into the folder format: structure: character value) markedupdatasets(change to phenoscape) plain focv7(change to fish)
-#new commandline:
-#cd workspace\parser\Unsupervised
-#perl unsupervisedClauseMarkupBenchmarked.pl "C:\Users\Zilong Chang\workspace\target\sources" phenoscape plain fish >output.txt
-
-#$ARGV[0] = $ARGV[0]." ".$ARGV[1]." ".$ARGV[2];
-#$ARGV[1] = $ARGV[3];
-#$ARGV[2] = $ARGV[4];
-#print $ARGV[0]."\n";
-#print $ARGV[1]."\n";
-#print $ARGV[2]."\n";
-
-#$ARGV[3] = \0;
-#$ARGV[4] = \0;
-#print "Length of array ".@ARGV;
-
-
-
 print STDOUT "Initialized:\n";
-###########################################################################################
-#########################                                     #############################
-#########################set up global variables              #############################
-###########################################################################################
+print "[DIR](ARGV[0])\n\t$ARGV[0]\n";
+print "[DB](ARGV[1])\n\t$ARGV[1]\n";
+print "[Learning Mode](ARGV[2])\n\t$ARGV[2]\n";
+print "[Prefix](ARGV[3])\n\t$ARGV[3]\n";
 
 #my $dir = $ARGV[0]."\\";#textfile
 my $dir = $ARGV[0]."/";#textfile
@@ -166,7 +102,9 @@ my $prefix = $ARGV[3]; #prefix for all tables generated by this program
 $prefix =~ s#-#_#g;
 my $defaultgeneraltag = "general";
 
-my $debug = 0; #debug learning process
+
+
+
 my $debugp = 0; #debug pattern
 my $debugnouns = 0; #debug heuristic nouns for phenoscape
 
@@ -220,6 +158,8 @@ my $ANDORPTN = "^(?:".$SEGANDORPTN."[,&]+)*".$SEGANDORPTN.$bptn;
 my $IGNOREPTN ="(IGNOREPTN)"; #disabled
 my $stop = $NounHeuristics::STOP;
 
+
+
 #prepare database
 my $haskb = kbexists();
 #$haskb = 0;
@@ -231,8 +171,70 @@ if($haskb){
 }
 
 #read sentences in from disk
-print STDOUT "Reading sentences:\n";
-populatesents();
+
+if ($use_fna2_v19_jing_sentence) {
+    print STDOUT "Importing Sentence Done!\n";
+    importingsents(); 
+    
+}
+else {
+    print STDOUT "Reading sentences:\n";
+    populatesents();
+}
+
+sub importingsents{
+    print STDOUT "Importing sentences from fna2_v19_jing...\n";
+    
+    my($sth);
+    
+    $sth = $dbh->prepare('use '.$db)
+    or die "Program terminates unexpected due to: ".$dbh->errstr."\n";
+    $sth->execute() or die $sth->errstr."\n";
+    
+    $sth = $dbh->prepare("INSERT INTO ".$db.".".$prefix."_sentence (sentid, source, sentence, originalsent, lead, status) SELECT sentid, source, sentence, originalsent, lead, status FROM markedupdatasets.fna2_v19_jing_sentence limit $use_limit");
+    $sth->execute() or print STDOUT "$sth->errstr\n";
+    
+    $sth = $dbh->prepare("select sentid, source, originalsent from ".$db.".".$prefix."_sentence");
+    $sth->execute() or print STDOUT "$sth->errstr\n";
+    
+    my($stmt);
+    my($sentid, $source, $sentence, $osent, $lead, $status, $type);
+    my(@sentid, @source, @sentence, @originalsent, @lead, @status, @type);
+    my($file);
+    my(%type_map);
+    my($maxid);
+    $maxid=0;
+    while(($sentid, $source, $osent) = $sth->fetchrow_array()){
+        if ($sentid>$maxid) {
+            $maxid = $sentid;
+        }
+        
+        $file = $source;
+        $file =~ s#-\d*$##g;
+        $type = type($file);
+        #print "source: $source\n";
+        #print "file: $file\n";
+        #print "type: $type\n";
+        $type_map{$sentid} = $type;
+        #print "[$sentid->$type]\n";
+        getallwords($osent);
+    }
+    
+    chop($PROPERNOUNS);
+    $maxid = $maxid + 1;
+    print "Total sentences = $maxid\n";
+
+    foreach my $id (keys(%type_map)){
+        $type = $type_map{$id};
+        
+        $stmt = "update ".$prefix."_sentence set type='$type' where sentid = $id";
+        $sth = $dbh->prepare($stmt);
+    	$sth->execute() or die $sth->errstr."\n SQL Statement: ".$stmt."\n";
+    }
+    
+    populateunknownwordstable();
+}
+
 
 
 addheuristicsnouns();
@@ -311,8 +313,10 @@ resetcounts();
 ###############################################################################
 
 
+#-Dongye 
 markupbypattern(); #chromosome
 
+#-Dongye 
 markupignore();#similar to , differs from etc.3/21/09
 
 print STDOUT "Learning rules with high certainty:\n";
@@ -322,78 +326,80 @@ print STDOUT "Bootstrapping rules:\n";
 discover("normal");
 
 #Hong Nov.18:
-my $test = $dbh->prepare('use '.$db)
-or die "Program terminates unexpected due to: ".$dbh->errstr."\n";
-$test->execute() or die $test->errstr."\n";
+##my $test = $dbh->prepare('use '.$db)
+##or die "Program terminates unexpected due to: ".$dbh->errstr."\n";
+##$test->execute() or die $test->errstr."\n";
+#-Dongye 
 print STDOUT "Additional bootstrappings:\n";
+#-Dongye 
 additionalbootstrapping();
 
 #4/7/09 switch order between unknownwordbootstrapping and separatemodifiers
 #bootstrap the unknownwords table: starting with simple pls.
 unknownwordbootstrapping(); #result in entire set of fully tagged sentences
 
-print STDOUT "Miscellaneous tasks\n";
+##print STDOUT "Miscellaneous tasks\n";
 #4/7/09
-adjsverification(); #lateral mistaken as "s", doesn't work
+#-Dongye adjsverification(); #lateral mistaken as "s", doesn't work
 
 #break tag into modifier and tag (one word).
 #Make tags starting with stopword "unknown" or remove some/all etc from tag.
 #Contains NULL for unknown tags/modifiers.
-separatemodifiertag();
+#-Dongye separatemodifiertag();
 
 #4/15/09
-print STDOUT "::::::::::::::::::::::::reduce roles for NMB words: \n";
-resolvenmb();
+#-Dongye print STDOUT "::::::::::::::::::::::::reduce roles for NMB words: \n";
+#-Dongye resolvenmb();
 
 #Hong Nov.18: adding
-print STDOUT "::::::::::::::::::::::::set and or: \n";
-setandor(); #reset tag to [andor] for and/or sentence
+#-Dongye print STDOUT "::::::::::::::::::::::::set and or: \n";
+#-Dongye setandor(); #reset tag to [andor] for and/or sentence
 
 
-if ($lm eq "adj"){
-	print STDOUT "::::::::::::::::::::::::Bootstrapping on adjective subjects: \n";
-	adjectivesubjectbootstrapping()
-}else{
+#-Dongye if ($lm eq "adj"){
+	#-Dongye print STDOUT "::::::::::::::::::::::::Bootstrapping on adjective subjects: \n";
+	#-Dongye adjectivesubjectbootstrapping()
+#-Dongye }else{
 	#3/11/09
-	my $v = 0;
-	do{
-		$v = 0;
-		$v= andor();
+	#-Dongye my $v = 0;
+	#-Dongye do{
+		#-Dongye $v = 0;
+		#-Dongye $v= andor();
 	#	print STDOUT "::::::::::::::::::::::::Bootstrapping on adjective subjects: \n";
 	#	adjectivesubjectbootstrapping() if $v >0;
-	}while $v > 0;
-}
+	#-Dongye }while $v > 0;
+#-Dongye }
 
-print STDOUT "::::::::::::::::::::::::reset and or: \n";
-resetandor();
+#-Dongye print STDOUT "::::::::::::::::::::::::reset and or: \n";
+#-Dongye resetandor();
 
-print STDOUT "::::::::::::::::::::::::tag all sentences: \n";
-tagallsentences("singletag", "sentence"); #not "original"
+#-Dongye print STDOUT "::::::::::::::::::::::::tag all sentences: \n";
+#-Dongye tagallsentences("singletag", "sentence"); #not "original"
 
-print STDOUT "::::::::::::::::::::::::markup by pos: \n";
-markupbypos(); #3/26/09 takes R0, R1, and R2 out of remainnulltag(). makes new discoveries. pattern: one word sentence => boundary e.g. alternate; x x x pl cases
+#-Dongye print STDOUT "::::::::::::::::::::::::markup by pos: \n";
+#-Dongye markupbypos(); #3/26/09 takes R0, R1, and R2 out of remainnulltag(). makes new discoveries. pattern: one word sentence => boundary e.g. alternate; x x x pl cases
 #3/21/09 switched order of phraseclause() and ditto()
-print STDOUT "::::::::::::::::::::::::PhraseClause: \n";
-phraseclause(); #does not make new discoveries, work on remaining null tagged clauses: to be tested, test1 does not have such cases.
-print STDOUT "::::::::::::::::::::::::Ditto: \n";
-ditto(); #does not make new discoveries, work on remaining null tagged clauses.
-print STDOUT "::::::::::::::::::::::::Of: \n";
+#-Dongye print STDOUT "::::::::::::::::::::::::PhraseClause: \n";
+#-Dongye phraseclause(); #does not make new discoveries, work on remaining null tagged clauses: to be tested, test1 does not have such cases.
+#-Dongye print STDOUT "::::::::::::::::::::::::Ditto: \n";
+#-Dongye ditto(); #does not make new discoveries, work on remaining null tagged clauses.
+#-Dongye print STDOUT "::::::::::::::::::::::::Of: \n";
 #comment if slow
 #of(); #need knowledge of structural hierarchy, should be the last learning module
-print STDOUT "::::::::::::::::::::::::Pronoun/character/proposition/errours noun subjects: \n";
-pronouncharactersubject(); #no new discoveries
-print STDOUT "::::::::::::::::::::::::Finalize ignored sentences: \n";## 3/24/09
-finalizeignored(); #modified 3/26/09
-print STDOUT "::::::::::::::::::::::::Tag remaining isnull(tag) sentences: \n";
-remainnulltag(); #keep only R3 3/26/09
-if($lm eq "adj"){
-	print STDOUT "::::::::::::::::::::::::Common Substructures: \n";
-	commonsubstructure();
-}
+#-Dongye print STDOUT "::::::::::::::::::::::::Pronoun/character/proposition/errours noun subjects: \n";
+#-Dongye pronouncharactersubject(); #no new discoveries
+#-Dongye print STDOUT "::::::::::::::::::::::::Finalize ignored sentences: \n";## 3/24/09
+#-Dongye finalizeignored(); #modified 3/26/09
+#-Dongye print STDOUT "::::::::::::::::::::::::Tag remaining isnull(tag) sentences: \n";
+#-Dongye remainnulltag(); #keep only R3 3/26/09
+#-Dongye if($lm eq "adj"){
+	#-Dongye print STDOUT "::::::::::::::::::::::::Common Substructures: \n";
+	#-Dongye commonsubstructure();
+#-Dongye }
 
 #3/28/09 tobe checked
-print STDOUT "::::::::::::::::::::::::Comma used for 'and': \n";
-commaand(); #to be tested on a larger set, test0 does not have this case. no new discovery, all clauses matching the
+#-Dongye print STDOUT "::::::::::::::::::::::::Comma used for 'and': \n";
+#-Dongye commaand(); #to be tested on a larger set, test0 does not have this case. no new discovery, all clauses matching the
 
 
 
@@ -402,18 +408,18 @@ commaand(); #to be tested on a larger set, test0 does not have this case. no new
 #fixxwithy(); #disabled. could be "shape with ..."
 
 #3/29/09, 4/29/09 swith order with normalizetags
-if ($lm eq "plain"){
-	print STDOUT "::::::::::::::::::::::::Normalize modifiers: \n";
-	normalizemodifiers(); #to be tested on a larger set, test0 does not have this case.
-}
+#-Dongye if ($lm eq "plain"){
+	#-Dongye print STDOUT "::::::::::::::::::::::::Normalize modifiers: \n";
+	#-Dongye normalizemodifiers(); #to be tested on a larger set, test0 does not have this case.
+#-Dongye }
 
-print STDOUT "::::::::::::::::::::::::Final step: normalize tag and modifiers: \n";
-normalizetags(); ##normalization is the last step : turn all tags and modifiers to singular form, remove <NBM> tags from sentence
-prepareTables4Parser();
+#-Dongye print STDOUT "::::::::::::::::::::::::Final step: normalize tag and modifiers: \n";
+#-Dongye normalizetags(); ##normalization is the last step : turn all tags and modifiers to singular form, remove <NBM> tags from sentence
+#-Dongye prepareTables4Parser();
 #resolvesentencetags(); #for future
 
 
-print STDOUT "Done:\n";
+#-Dongye print STDOUT "Done:\n";
 
 #test 4/15/09 true modifiers
 #listtruemodifiers();
@@ -656,11 +662,13 @@ sub addstopwords{
 	push(@stops, "NUM", "(", "[", "{", ")", "]", "}");
 
 	push(@stops, "\\\\d+");
-	print "stop list:\n@stops\n" if $debug;
+	print "[addstopwords]!@#\n" if $addstopwords_debug;
+	print "[addstopwords]stop list:\n@stops\n" if $addstopwords_debug;
 
 	for (@stops){
 		my $w = $_;
 		if($w =~/\b(?:$FORBIDDEN)\b/){next;}
+		print "[addstopwords]Add Stop Word: ".$w."\n" if $addstopwords_debug;
 		update($w, "b", "*", "wordpos", 0);
 		#my $stmt ="insert into ".$prefix."_wordpos (word, pos, role, certaintyu, certaintyl) values(\"$w\",\"b\",\"\",1,1)";
 		#my $sth = $dbh->prepare($stmt);
@@ -671,23 +679,27 @@ sub addstopwords{
 sub addpropernouns{
 	my @chars = split(/\|/,$PROPERNOUNS);
 
-	print "proper nouns:\n$PROPERNOUNS\n" if $debug;
+	print "[addpropernouns]!@#\n" if $addpropernouns_debug;
+	print "[addpropernouns]proper nouns:\n$PROPERNOUNS\n" if $addpropernouns_debug;
 
 	for (@chars){
 		my $w = $_;
 		if($w =~/\b(?:$FORBIDDEN)\b/){next;}
 		update($w, "z", "*", "wordpos", 0);
+		print "[addpropernouns]add proper noun: ".$w."\n" if $addpropernouns_debug;
 	}
 }
 
 sub addcharacters{
 	my @chars = split(/\|/,$CHARACTER);
 
-	print "character list:\n$CHARACTER\n" if $debug;
+	print "[addcharacters]!@#\n" if $addcharacters_debug;
+	print "[addcharacters]character list:\n$CHARACTER\n" if $addcharacters_debug;
 
 	for (@chars){
 		my $w = $_;
 		if($w =~/\b(?:$FORBIDDEN)\b/){next;}
+		print "[addcharacters]Add Character Word: ".$w."\n" if $addcharacters_debug;
 		update($w, "b", "*", "wordpos", 0);
 	}
 }
@@ -695,36 +707,42 @@ sub addcharacters{
 sub addnumbers{
 	my @chars = split(/\|/,$NUMBERS);
 
-	print "numbers:\n$NUMBERS\n" if $debug;
+	print "[addnumbers]!@#\n" if $addnumbers_debug;
+	print "[addnumbers]numbers:\n$NUMBERS\n" if $debug;
 
 	for (@chars){
 		my $w = $_;
 		if($w =~/\b(?:$FORBIDDEN)\b/){next;}
 		update($w, "b", "*", "wordpos", 0);
+		print "[addnumbers]Add Number: ".$w."\n" if $addnumbers_debug;
 	}
 	update("NUM", "b", "*", "wordpos", 0);
 }
 
 sub addclusterstrings{
 	my @chars = split(/\|/,$CLUSTERSTRINGS);
-
-	print "clusterstrings :\n$CLUSTERSTRINGS\n" if $debug;
+	print "[addclusterstrings]!@#\n" if $addclusterstrings_debug;
+	print "[addclusterstrings]clusterstrings :\n$CLUSTERSTRINGS\n" if $addclusterstrings_debug;
 
 	for (@chars){
 		my $w = $_;
 		if($w =~/\b(?:$FORBIDDEN)\b/){next;}
 		update($w, "b", "*", "wordpos", 0);
+		print "[addclusterstrings]Add ClusterString: ".$w."\n" if $addclusterstrings_debug;
 	}
 }
 
 sub addDescriptors{
+	print "enter addDescriptors\n" if $addDescriptors_debug;
 	my @descriptors = @_;
-	print "descriptors :\n@descriptors\n" if $debug;
+	print "descriptors :\n@descriptors\n" if $addDescriptors_debug;
 	for (@descriptors){
 		my $w = $_;
 		if($w =~/\b(?:$FORBIDDEN)\b/){next;}
+		
 		update($w, "b", "", "wordpos", 1);
 	}
+	print "exit addDescriptors\n" if $debug;
 }
 
 sub addNouns{
@@ -740,35 +758,49 @@ sub addNouns{
 ###lateral/laterals terminal/terminals: blades of mid cauline spatulate or oblong to obovate or lanceolate , 6  35 × 1  15 cm , bases auriculate , auricles deltate to lanceolate , ± straight , acute , margins usually pinnately lobed , lobes ± deltate to lanceolate , not constricted at bases , terminals usually larger than laterals , entire or dentate .
 sub addheuristicsnouns{
 	my @nouns = NounHeuristics::heurnouns($dir, "");
-	#EOL:@nouns = ("angle[s]", "angles[p]", "base[s]", "bases[p]", "cell[s]", "cells[p]", "depression[s]", "depressions[p]", "ellipsoid[s]", "ellipsoids[p]", "eyespot[s]", "eyespots[p]", "face[s]", "faces[p]", "flagellum[s]", "flagella[p]", "flange[s]", "flanges[p]", "globule[s]", "globules[p]", "groove[s]", "grooves[p]", "line[s]", "lines[p]", "lobe[s]", "lobes[p]", "margin[s]", "margins[p]", "membrane[s]", "membranes[p]", "notch[s]", "notches[p]", "plastid[s]", "plastids[p]", "pore[s]", "pores[p]", "pyrenoid[s]", "pyrenoids[p]", "quarter[s]", "quarters[p]", "ridge[s]", "ridges[p]", "rod[s]", "rods[p]", "row[s]", "rows[p]", "sample[s]", "samples[p]", "sediment[s]", "sediments[p]", "side[s]", "sides[p]", "vacuole[s]", "vacuoles[p]", "valve[s]", "valves[p]");
-	print  "nouns learnt from heuristics:\n@nouns\n" if $debug;
+	print  "[addheuristicsnouns]nouns learnt from heuristics:\n@nouns\n" if $addheuristicsnouns_debug;
 
 	my @result = characterHeuristics();
+	
 	my $rnouns = $result[0];
 	my $rdescriptors = $result[1];
 	my @rnouns = @$rnouns;
 	my @descriptors = @$rdescriptors;
+	
+	print  "[addheuristicsnouns]rnouns:\n@rnouns\n" if $addheuristicsnouns_debug;
+	print  "[addheuristicsnouns]descriptors:\n@descriptors\n" if $addheuristicsnouns_debug;	
+		
+	print "[addheuristicsnouns]method addDescriptors:\n" if $addheuristicsnouns_debug;
 	addDescriptors(@descriptors);
+	print "[addheuristicsnouns]method addNouns:\n" if $addheuristicsnouns_debug;
 	addNouns(@rnouns);
-#	print "nouns\n";
-#	foreach my $n (@nouns){
-#		print "$n\t";
-#	}
-#	print "Descriptors\n";
-#	foreach my $d (@descriptors){
-#		print "$d\t";
-#	}
+	
+	print "[addheuristicsnouns][Nouns Learned]: @nouns\n" if $addheuristicsnouns_debug;
 
-	#"adhere[s] adheres[p] angle[s] angles[p] attach[s] attaches[p] base[s] bases[p] cell[s] cells[p] depression[s] depressions[p] direction[s] directions[p] ellipsoid[s] ellipsoids[p] eyespot[s] eyespots[p] face[s] faces[p] flagellum[s] flagella[p] flange[s] flanges[p] forward[s] forwards[p] globule[s] globules[p] groove[s] grooves[p] insert[s] inserts[p] jerk[s] jerks[p] length[s] lengths[p] lie[s] lies[p] line[s] lines[p] lobe[s] lobes[p] margin[s] margins[p] measure[s] meet[s] meets[p] membrane[s] membranes[p] narrow[s] narrows[p] notch[s] notches[p] observation[s] observations[p] plastid[s] plastids[p] pore[s] pores[p] pyrenoid[s] pyrenoids[p] quarter[s] quarters[p] ridge[s] ridges[p] rod[s] rods[p] row[s] rows[p] sample[s] samples[p] sediment[s] sediments[p] side[s] sides[p] size[s] sizes[p] third[s] thirds[p] vacuole[s] vacuoles[p] valve[s] valves[p] width[s] widths[p]"
 	my $pn = ""; #previous n
 	foreach my $n (@nouns){#convert to hash
+	
+print "[addheuristicsnouns]Noun to check: $n\n" if $addheuristicsnouns_debug;
+	
 		if($n =~ /\w/ and $n !~ /\b(NUM|$NUMBERS|$CLUSTERSTRINGS|$CHARACTER|$PROPERNOUNS)\b/){
 	    	#note: what if the same word has two different pos?
 			my @ns = split(/\|/,$n);
 			foreach my $w (@ns){
+				
+print "[addheuristicsnouns]Word to check: $n\n" if $addheuristicsnouns_debug;				
+				
 				if($w =~ /(\w+)\[([spn])\]/){
+					
+print "[addheuristicsnouns]Pass\n" if $addheuristicsnouns_debug;					
+					
 					  #my $sth = $dbh->prepare("insert into ".$prefix."_wordpos (word, pos, role, certaintyu, certaintyl)values(\"$w\",\"$2\",\"\",1,1)");
 		              #            $sth->execute();
+		              
+print "[addheuristicsnouns]method addheuristicsnouns part 2:\n" if $addheuristicsnouns_debug;		              
+		              
+print "[addheuristicsnouns]pn: $pn, w: $w\n" if $addheuristicsnouns_debug;		              
+print "[addheuristicsnouns]Update Word: $1, POS: $2\n" if $addheuristicsnouns_debug;		              
+		              
 	    		      update($1, $2, "*", "wordpos", 0);
 	    		      #populate singularpluralpair table with Ns
 	    		      if($pn=~/\w/ && $w=~/\w/ && ($pn =~ /\[s\]$/ && $w =~ /\[p\]$/)){
@@ -791,7 +823,8 @@ sub addheuristicsnouns{
 				}
 			}
 		}
-	}
+	}	
+
 }
 ##############################################################################
 ## return an array of  (nouns array) + (descriptor array)                   ##  
@@ -812,14 +845,20 @@ sub characterHeuristics{
 	$sth->execute() or print STDOUT "$sth->errstr\n";
 	
 	while(($source, $sentence, $originalsent) = $sth->fetchrow_array()){
+		print "$source\n" if $characterHeuristics_debug;
+		print "$sentence\n" if $characterHeuristics_debug;
+		print "$originalsent\n\n" if $characterHeuristics_debug;
+		
 		$originalsent = trim($originalsent);
-		print "$source\n" if $debugnouns;
+	
 		#noun rule 0: taxon names
 		if($originalsent =~ /<i>/){
-			my $copy = $originalsent;
-			while($copy =~ /(.*?)<i>\s*([^<]*)\s*<\/i>(.*)/){
+			print "noun rule 0\n" if $characterHeuristics_debug;
+			my $copy = $originalsent;  
+			while($copy =~ /(.*?)<i>\s*([^<]*)\s*<\/i>(.*)/){                                
 				my $t = $2;
-				$copy = $3;
+				$copy = $3;		
+				
 				$t =~ tr/A-Z/a-z/;
 				$taxonnames{$t} = 1;
 				my @ts = split(/\s+/, $t);
@@ -835,16 +874,14 @@ sub characterHeuristics{
 		
 		#noun rule 0.5
 		if($originalsent =~ /\b(\W+#s)\b/){ #Meckel's save Meckel, Meckels, and Meckel's
+			print "noun rule 0.5\n" if $characterHeuristics_debug;
 			my $t = $1;
 			$t =~ tr/A-Z/a-z/;
 			$nouns{$t} = 1;
-			if($debugnouns) {print "[noun05:$t] $originalsent\n";}
 			$t =~ s/#//;
 			$nouns{$t} = 1;
-			if($debugnouns) {print "[noun05:$t] $originalsent\n";}
 	   		$t =~ s/s$//;
 			$nouns{$t} = 1;
-			if($debugnouns) {print "[noun05:$t] $originalsent\n";}
 			$sentence =~ s/#//g;
 			updateSentence($source, $sentence);			
 		}
@@ -852,13 +889,23 @@ sub characterHeuristics{
 		#noun rule 2
 		my $cp = $originalsent;
 		while($cp =~ /(.*?)\b(a|an|the|some|any|this|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth) +(\w+)\s*($|\(|\[|{|\b($PREPOSITION)\b)(.*)/){
+			print "regex:\n" if $characterHeuristics_debug;
+			print "(.*?)\b(a|an|the|some|any|this|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth) +(\w+)\s*($|\(|\[|{|\b($PREPOSITION)\b)(.*)"."\n" if $characterHeuristics_debug;
+			print "noun role 2\n" if $characterHeuristics_debug;
+			print "cp: $cp\n" if $characterHeuristics_debug;
 			my $t = $3;
-			$cp = $5;
+			$cp = $6;
 			my $prep = $4;
+			print "1: $1\n" if $characterHeuristics_debug;
+			print "2: $2\n" if $characterHeuristics_debug;
+			print "3: $3\n" if $characterHeuristics_debug;
+			print "4: $4\n" if $characterHeuristics_debug;
+			print "5: $5\n" if $characterHeuristics_debug;
+			print "6: $6\n" if $characterHeuristics_debug;
 			if($prep =~/\w/ && $t =~/\b(length|width|presence|\w+tion)\b/){next;}
 			$t =~ tr/A-Z/a-z/;
 			$nouns{$t} = 1;
-			if($debugnouns){ print "[noun2:$t] $originalsent\n";}
+			if($characterHeuristics_debug){ print "t:$t]\n";}
 		}	
 		#noun rule 3
 		$cp = $originalsent; #may be like very wide  (In Dianema  Hoplosternum  some Cha...)
@@ -868,20 +915,23 @@ sub characterHeuristics{
 			$cp =~ s#[[:punct:]]##g; #keep "-"
 			$cp =~ s#aaa#-#g;
 			@tokens = split(/\s+/, $cp);
-			#if($source !~ /\.xml_\S+_/){#sources without 2 _ are character statements
-				$tokens[0]=""; #ignore the first word in character statements--this is normally capitalized
-			#}	
+			$tokens[0]=""; #ignore the first word in character statements--this is normally capitalized
 			foreach my $t (@tokens){
 				if($t =~ /[A-Z].+/ and $t!~/-\w+ed$/){#proper nouns and acronyms, S-shaped
+					print "noun rule 3\n" if $characterHeuristics_debug;
+					print "originalset: $cp\n" if $characterHeuristics_debug;
+					print "t: $t\n" if $characterHeuristics_debug;
 					if($t=~/^[A-Z0-9]+$/){
 						$t =~ tr/A-Z/a-z/;
+						print "anouns: $t\n" if $characterHeuristics_debug;
 						$anouns{$t} =1;
 					}else{
 						$t =~ tr/A-Z/a-z/;
 						$pnouns{$t} =1;
-					}			
+						print "pnouns: $t\n" if $characterHeuristics_debug;
+					}		
+					print "nouns: $t\n" if $characterHeuristics_debug;	
 					$nouns{$t}=1;
-					if($debugnouns) {print "[noun3:$t] $originalsent\n";}
 				}
 			}			
 		}
@@ -890,18 +940,23 @@ sub characterHeuristics{
 			if(!isDescriptor($originalsent)){
 				$originalsent =~ tr/A-Z/a-z/;
 				$nouns{$originalsent}=1;
-				if($debugnouns) {print "[noun1:$originalsent] $originalsent\n";}
+				print "noun rule 1\n" if $characterHeuristics_debug;
 			}
 		}	
 		#noun rule 4: epibranchial 4
 		$cp = $originalsent;
 		while($cp =~ /(.*?)\s(\w+)\s+\d+(.*)/){
+			print "noun rule 4\n" if $characterHeuristics_debug;
 			my $t = $2;
 			$cp = $3;
+			print "1: $1\n" if $characterHeuristics_debug;
+			print "2: $2\n" if $characterHeuristics_debug;
+			print "3: $3\n" if $characterHeuristics_debug;
+			print "4: $4\n" if $characterHeuristics_debug;
 			if($t !~ /\b($PREPOSITION|$stop)\b/){
 				$t =~ tr/A-Z/a-z/;
 				$nouns{$t} = 1;
-				if($debugnouns){ print "[noun4:$t] $originalsent\n";}
+				if($characterHeuristics_debug){ print "t:$t\n";}
 			}
 		}	
 		#remove puncts for descriptor rules
@@ -912,18 +967,20 @@ sub characterHeuristics{
 		#descriptor rule 1:
 		if($source =~ /\.xml_\S+_/ and $originalsent !~ /\s/){#single word
 			if(grep(/^$originalsent$/, keys(%nouns)) < 1){
+				print "descriptor rule 1\n" if $characterHeuristics_debug;
+				print "source: $source\n" if $characterHeuristics_debug;
+				print "originalsent: $originalsent\n" if $characterHeuristics_debug;
 				$originalsent =~ tr/A-Z/a-z/;
 				$descriptors{$originalsent}=1;
-				if($debugnouns){ print "[desp:$originalsent] $originalsent\n";}
 			}
 		}			
 		#descriptor rule 2:
 		@tokens = split(/\s+/, $originalsent);
 		foreach my $t (@tokens){
 			if(isDescriptor($t)){
+				print "descriptor rule 2\n" if $characterHeuristics_debug;
 				$t =~ tr/A-Z/a-z/;
 				$descriptors{$t}=1;
-				if($debugnouns) {print "[desp:$t] $originalsent\n";}
 			}
 		}	
 		
@@ -950,10 +1007,13 @@ sub characterHeuristics{
 	}
 	
 	push(@nouns, @anouns, @pnouns, keys(%taxonnames));
+	print "quit characterHeuristics\n" if $characterHeuristics_debug;
 	return (\@nouns, \@descriptors);
+	
 } 
 
 sub updateSentence{
+	print "updateSentence\n" if $characterHeuristics_debug;
 	my ($source, $sentence) = @_;
 	my $sth = $dbh->prepare('update '.$prefix.'_sentence set sentence = "'.$sentence.'" where source ="'.$source.'"');
 	$sth->execute() or print STDOUT "$sth->errstr\n";
@@ -1012,77 +1072,143 @@ sub isDescriptor{
 #foreach unknownword in unknownwords table
 #   seperate root and suffix
 #   if root is a word in WN or unknownwords table
-#   make the unknowword a "b"
-sub  posbysuffix{
+#   make the unknowword a "b" boundary
+sub posbysuffix{
+	print "Enter posbysuffix\n" if $posbysuffix_debug;
 	my($sth, $pattern, $unknownword);
 	$pattern = "^[a-z_]+(".$SUFFIX.")\$";
+	print "Pattern 1: $pattern"."\n" if $posbysuffix_debug;
 	$sth = $dbh->prepare("select word from ".$prefix."_unknownwords where word rlike '$pattern' and flag= 'unknown'");
 	$sth->execute() or print STDOUT "$sth->errstr\n";
 	while(($unknownword) = $sth->fetchrow_array()){
+		print "Unknown Word: $unknownword"."\n" if $posbysuffix_debug;
 		if($unknownword=~/^[a-zA-Z0-9_-]+$/ and $unknownword =~/^(.*?)($SUFFIX)$/){
+			print "Test word: $unknownword\n" if $posbysuffix_debug;
 			if(containsuffix($unknownword, $1, $2)){
+				print "Pass\n" if $posbysuffix_debug;
 				update($unknownword, "b", "*", "wordpos", 0);
-				print "posbysuffix set $unknownword a boundary word\n" if $debug;
+				print "posbysuffix set: $unknownword\n\n" if $posbysuffix_debug;
+			}
+			else {
+				print "Not pass\n\n" if $posbysuffix_debug;
 			}
 		}
 	}
 
 	$pattern = "^[._.][a-z]+"; #, _nerved
+	print "Pattern 2: $pattern"."\n" if $posbysuffix_debug;
 	$sth = $dbh->prepare("select word from ".$prefix."_unknownwords where word rlike '$pattern' and flag= 'unknown'");
 	$sth->execute() or print STDOUT "$sth->errstr\n";
 	while(($unknownword) = $sth->fetchrow_array()){
+		print "Unknown Word: $unknownword"."\n" if $posbysuffix_debug;
+		print "Update\n" if $posbysuffix_debug;
 		update($unknownword, "b", "*", "wordpos", 0);
-		print "posbysuffix set $unknownword a boundary word\n" if $debug;
+		print "posbysuffix set $unknownword a boundary word\n\n" if $posbysuffix_debug;
 	}
+	
+	print "Quite posbysuffix"."\n\n" if $posbysuffix_debug;
 }
 
 #return 0 or 1 depending on if the word contains the suffix as the suffix
 sub containsuffix{
+	print "enter containsuffix\n" if $containsuffix_debug;
+	
 	my($word, $base, $suffix) = @_;
 	my($flag, $wnoutputword, $wnoutputbase, $wordinwn, $baseinwn, $sth);
 	$flag = 0;
+	
+	if ($containsuffix_debug) {
+		print "Word: $word\n";
+		print "Base: $base\n";
+		print "Suffix: $suffix\n";
+	}
 
 	$base =~ s#_##g; #cup_shaped
 	$wnoutputword = `wn $word -over`;
   	if ($wnoutputword !~/\w/){#word not in WN
+  		print "case 1.1\n" if $containsuffix_debug;
 		$wordinwn = 0;
   	}else{ 	#found $word in WN:
+  		print "case 1.2\n" if $containsuffix_debug;
   		$wnoutputword =~ s#\n# #g;
   		$wordinwn = 1;
   	}
 
   	$wnoutputbase = `wn $base -over`;
   	if ($wnoutputbase !~/\w/){#word not in WN
+  		print "case 2.1\n" if $containsuffix_debug;
 		$baseinwn = 0;
   	}else{ 	#found $word in WN:
+  		print "case 2.2\n" if $containsuffix_debug;
   		$wnoutputbase =~ s#\n# #g;
   		$baseinwn = 1;
   	}
 
 	if($suffix eq "ly"){#if WN pos is adv, return 1: e.g. ly, or if $base is in unknownwords table
+		print "case 3.1\n" if $containsuffix_debug;
 		if($wordinwn){
 			if($wnoutputword =~/Overview of adv $word/){
-				return 1;;
+				print "case 3.1.1\n" if $containsuffix_debug;
+				print "return 1\n" if $containsuffix_debug;
+				print "quite containsuffix\n" if $containsuffix_debug;
+				return 1;
 			}
 		}
 		$sth = $dbh->prepare("select word from ".$prefix."_unknownwords where word = '$base'");
 		$sth->execute() or print STDOUT "$sth->errstr\n";
-		return 1 if $sth->rows > 0;
-	}elsif($suffix eq "er" || $suffix eq "est"){#if WN recognize superlative, comparative adjs, return 1: e.g. er, est
+		
+		if ($sth->rows > 0) {
+			print "case 3.1.2\n" if $containsuffix_debug;
+			print "return 1\n" if $containsuffix_debug;
+			print "quite containsuffix\n" if $containsuffix_debug;
+			return 1;
+		}
+	}
+	elsif($suffix eq "er" || $suffix eq "est"){#if WN recognize superlative, comparative adjs, return 1: e.g. er, est
+		print "case 3.2\n" if $containsuffix_debug;
 		if($wordinwn){
 			if($wnoutputword =~/Overview of adj (\w+)/){#$word = softer, $1 = soft vs. $word=$1=neuter
-				return 1 if $word=~/^$1\w+/;
+				print "wnoutputword:\n$wnoutputword\n" if $containsuffix_debug;	
+				print "1: $1 is a adj\n" if $containsuffix_debug;			
+				if ($word=~/^$1\w+/){
+					print "Pass\n" if $containsuffix_debug;
+					print "Word: $word is a adj\n" if $containsuffix_debug;
+					print "return 1\n" if $containsuffix_debug;
+					print "quite containsuffix\n" if $containsuffix_debug;
+					return 1;
+				}
+				else {
+					print "Not pass\n" if $containsuffix_debug;
+				}
 			}
 		}
-	}else{#if $base is in WN or unknownwords table, or if $word has sole pos adj in WN, return 1: e.g. scalelike
-		if($baseinwn){return 1;}
+	}
+	else{#if $base is in WN or unknownwords table, or if $word has sole pos adj in WN, return 1: e.g. scalelike
+		print "case 3.3\n" if $containsuffix_debug;
+		if($baseinwn){
+			print "case 3.3.1\n" if $containsuffix_debug;
+			print "return 1\n" if $containsuffix_debug;
+			print "quite containsuffix\n" if $containsuffix_debug;
+			return 1;
+		}
 		if($wnoutputword =~/Overview of adj/ && $wnoutputword !~/Overview of .*? Overview of/){
-			return 1;;
+			print "case 3.3.2\n" if $containsuffix_debug;
+			print "return 1\n" if $containsuffix_debug;
+			print "quite containsuffix\n" if $containsuffix_debug;
+			return 1;
 		}
 		$sth = $dbh->prepare("select word from ".$prefix."_unknownwords where word = '$base'");
 		$sth->execute() or print STDOUT "$sth->errstr\n";
-		return 1 if $sth->rows > 0;
+		if ($sth->rows > 0){
+			print "case 3.3.3\n" if $containsuffix_debug;
+			print "return 1\n" if $containsuffix_debug;
+			print "quite containsuffix\n" if $containsuffix_debug;
+			return 1;
+		}
 	}
+	
+	print "return $flag\n" if $containsuffix_debug;
+	print "quite containsuffix\n" if $containsuffix_debug;
 	return $flag;
 }
 
@@ -1094,7 +1220,23 @@ sub resetcounts{
 
 sub markknown{
 	my ($word, $pos,$role, $table, $increment) = @_;
+	print "[markknown]enter($word, $pos,$role, $table, $increment)\n" if $markknown_debug;
+	
 	my ($sth, $pattern, $newword, $sign, $otherprefix, $spwords);
+	
+	if ($markknown_debug) {
+		print "[markknown]Word: $word\n";
+		print "[markknown]POS: $pos\n";
+		if ($role eq "") {
+			print "[markknown]Role: empty\n";
+		}
+		else {
+			print "[markknown]Role: $role\n";
+		}
+		print "[markknown]Table: $table\n";
+		print "[markknown]Increment: $increment\n";
+	}
+	
 	#if($word !~ /\w/) {
 	#	print "$word is not a word, not updated\n" if $debug;
 	#	return $sign;
@@ -1107,30 +1249,51 @@ sub markknown{
 	}
 	#remove/replace prefix from $word
 	if($word =~/^($PREFIX)(\S+)/){
+		print "markknown - case 1\n" if $markknown_debug;
 		my $tmp = $2;
 		$otherprefix = $PREFIX;
 		$otherprefix =~s#\b$1\b##;
 		$otherprefix =~ s#\|\|#|#;
 		$otherprefix =~ s#^\|##;
 		$spwords = "(".escape(singularpluralvariations($tmp)).")";
+		
+		#print "method singularpluralvariations\n" if $markknown_debug;
+		#print "input:\n" if $markknown_debug;
+		#print $tmp."\n" if $markknown_debug;
+		#print "out:\n" if $markknown_debug;
+		#print singularpluralvariations($tmp)."\n" if $markknown_debug;
+		
 		$pattern = "^(".$otherprefix.")?".$spwords."\$";
 		$sth = $dbh->prepare("select word from ".$prefix."_unknownwords where word rlike '$pattern' and flag= 'unknown'");
 		$sth->execute() or print STDOUT "$sth->errstr\n";
 		while(($newword) = $sth->fetchrow_array()){
+			print "[markknown]markknown - case 1.1\n" if $markknown_debug;
 			$sign += processnewword($newword, $pos, "*", $table, $word, 0); #6/11/09 $role => *, add 0
-			print "by removing prefix of $word, know $newword is a [$pos] \n" if $debug;
+			print "[markknown]by removing prefix of $word, know $newword is a [$pos] \n" if $markknown_debug;
 		}
-	}#else{ #3/21/09 psuedo/inter/area
+	}
+	#else{ #3/21/09 psuedo/inter/area
 		#add prefix to $word
+		
+		
 		if($word=~/^[a-z]/){
+			print "[markknown]markknown - case 2\n" if $markknown_debug;
 			$spwords = "(".escape(singularpluralvariations($word)).")";
+					
+			#print "method singularpluralvariations\n" if $markknown_debug;
+			#print "input:\n" if $markknown_debug;
+			#print $word."\n" if $markknown_debug;
+			#print "out:\n" if $markknown_debug;
+			#print singularpluralvariations($word)."\n" if $markknown_debug;
+			
 			$pattern = "^(".$PREFIX.")".$spwords."\$"; #$word=shrubs; $pattern = (pre|sub)shrubs
 			#print "$pattern\n";
 			$sth = $dbh->prepare("select word from ".$prefix."_unknownwords where word rlike '$pattern' and flag = 'unknown'");
 			$sth->execute() or print STDOUT "$sth->errstr\n";
 			while(($newword) = $sth->fetchrow_array()){
+				print "[markknown]markknown - case 2.1\n" if $markknown_debug;
 				$sign += processnewword($newword, $pos,"*", $table, $word, 0);
-				print "by adding a prefix to $word, know $newword is a [$pos] \n" if $debug;
+				print "[markknown]by adding a prefix to $word, know $newword is a [$pos] \n" if $markknown_debug;
 			}
 			#word_$spwords
 			$spwords = "(".escape(singularpluralvariations($word)).")";
@@ -1138,11 +1301,16 @@ sub markknown{
 			$sth = $dbh->prepare("select word from ".$prefix."_unknownwords where word rlike '$pattern' and flag = 'unknown'");
 			$sth->execute() or print STDOUT "$sth->errstr\n";
 			while(($newword) = $sth->fetchrow_array()){
+				print "[markknown]markknown - case 2.2\n" if $markknown_debug;
 				$sign += processnewword($newword, $pos,"*", $table, $word, 0);
-				print "by adding a prefix word to $word, know $newword is a [$pos] \n" if $debug;
+				print "[markknown]by adding a prefix word to $word, know $newword is a [$pos] \n" if $markknown_debug;
 			}
 		}
+		
+		
 	#}
+	
+	print "[markknown]Return: $sign\n\n\n" if $markknown_debug;
 	return $sign;
 }
 
@@ -1171,12 +1339,16 @@ sub singularpluralvariations{
 
 sub processnewword{
 	my ($newword, $pos, $role, $table, $sourceword, $increment) = @_;
+	
+	print "[processnewword]enter($newword, $pos, $role, $table, $sourceword, $increment)\n" if $processnewword_debug;
+	
 	my $sign = 0;
 	#remove $newword from unknownwords
 	updateunknownwords($newword, $sourceword);
 	#insert $newword to $table
 	$sign += updatePOS($newword, $pos, $role, $increment) if $table eq "wordpos";
 	$sign += addmodifier($newword, $increment) if $table eq "modifiers";
+	print "[processnewword]return $sign, quite\n" if $processnewword_debug;
 	return $sign;
 }
 
@@ -1630,13 +1802,17 @@ sub discovernewmodifiers{	#each modifier is one word
 
 #correct the pos of the word from N to M
 sub changePOS{
+	
 #sub n2m{
 	my ($word, $oldpos, $newpos, $role, $increment) = @_;
+	
+	print "[changePOS]enter($word, $oldpos, $newpos, $role, $increment)\n" if $changePOS_debug;
+	
 	my ($sth, $sentid, $modifier, $tag, $sentence, $sth1, $sign);
 	$oldpos = lc $oldpos;
 	$newpos = lc $newpos;
 
-	print "change pos of [$word] from $oldpos to $newpos, with increment $increment\n" if $debug;
+	print "change pos of [$word] from $oldpos to $newpos, with increment $increment\n" if $changePOS_debug;
 	if($oldpos =~ /s/ && $newpos=~/m/){ #s2m,
 		#remove its "s" pos from wordpos table
 		#$sth = $dbh->prepare("delete from ".$prefix."_wordpos where word = '$word' and pos = '$oldpos'");
@@ -1668,9 +1844,18 @@ sub changePOS{
     	$sth->execute() or print STDOUT "$sth->errstr\n";
     	if($sth->rows == 0){
     		$sth = $dbh->prepare("insert into ".$prefix."_wordpos (word, pos, role, certaintyu, certaintyl)values ('$word', '$newpos', '$role', $certaintyu, 0)");
-    		$sth->execute() or print STDOUT "$sth->errstr\n";;
+    		$sth->execute() or print STDOUT "$sth->errstr\n";
+    		
+if ($wordpos_debug){    		
+    print "\tInsert into WordPOS table\n";
+    print "\t\tWord: $word\n";
+    print "\t\tPOS: $newpos\n";
+    print "\t\tRole: $role\n";
+}       		
+    		
     	}
-		print "\t: change [$word($oldpos => $newpos)] role=>$role\n" if $debug;
+ 	
+    	print "\t: change [$word($oldpos => $newpos)] role=>$role\n" if $changePOS_debug;
 		$sign++;
 		#all sentences tagged with $word (b), retag.
 		$sth = $dbh->prepare("select sentid, modifier, tag, sentence from ".$prefix."_sentence where tag = '$word'");
@@ -1692,8 +1877,16 @@ sub changePOS{
     	if($sth->rows == 0){
 	    	$sth = $dbh->prepare("insert into ".$prefix."_wordpos (word, pos, role, certaintyu, certaintyl) values ('$word', '$newpos', '$role', $certaintyu, 0)");
     		$sth->execute() or print STDOUT "$sth->errstr\n";
+    		
+if ($wordpos_debug){    		
+    print "\tInsert into WordPOS table\n";
+    print "\t\tWord: $word\n";
+    print "\t\tPOS: $newpos\n";
+    print "\t\tRole: $role\n";
+}       		
+    		
     	}
-		print "\t: change [$word($oldpos => $newpos)] role=>$role\n" if $debug;
+		print "\t: change [$word($oldpos => $newpos)] role=>$role\n" if $changePOS_debug;
 		$sign++;
 	}
 
@@ -1703,9 +1896,11 @@ sub changePOS{
 	my ($certaintyl) = $sth->fetchrow_array();
 	if(defined $certaintyl && $certaintyl >0){
 		$sth = $dbh->prepare("update ".$prefix."_wordpos set certaintyl=$certaintyl where word=\"$word\"");
-    	$sth->execute();
-		print "\t: total occurance of [$word] =$certaintyl\n" if $debug;
+    	$sth->execute();	
+		print "\t: total occurance of [$word] =$certaintyl\n" if $changePOS_debug;
 	}
+	
+	print "[changePOS]return $sign\n\n" if $changePOS_debug;
 	return $sign;
 }
 
@@ -1715,16 +1910,22 @@ sub changePOS{
 #find the tag of the sentence of which this sentid (clause) is a part of
 sub getparentsentencetag{
 	my $sentid = shift;
-	my ($sth, $modifier, $tag, $thissent);
+	my ($sth, $modifier, $tag, $thisoriginalsent, $thissent);
 	#first check the originalsent of $sentid starts with a [a-z\d]
+	# get the originalsent from sentenceTable with sentid - Dongye 
 	$sth = $dbh->prepare("select originalsent from ".$prefix."_sentence where sentid = $sentid");
 	$sth->execute() or print STDOUT "$sth->errstr\n";
 	($thissent) = $sth->fetchrow_array(); #take the tag of the first sentence
+	# case1: if the originalsent meet a condition
 	if($thissent =~/^\s*[^A-Z]/){
+		# select modifier and tag from sentenceTable of the
 		#for the following regexp to work, need to change originalsent's collate to latin1_general_cs (cs for case sensitive)
-		$sth = $dbh->prepare("select modifier, tag from ".$prefix."_sentence where (tag != 'ignore' or isnull(tag)) and (originalsent COLLATE utf8_bin regexp '^[A-Z].*' or originalsent rlike ': *\$') and sentid < $sentid order by sentid desc");
+		$sth = $dbh->prepare("select modifier, tag, thisoriginalsent from ".$prefix."_sentence where (tag != 'ignore' or isnull(tag)) and (originalsent COLLATE utf8_bin regexp '^[A-Z].*' or originalsent rlike ': *\$') and sentid < $sentid order by sentid desc");
 		$sth->execute() or print STDOUT "$sth->errstr\n";
-		($modifier, $tag) = $sth->fetchrow_array(); #take the tag of the first sentence
+		($modifier, $tag, $thisoriginalsent) = $sth->fetchrow_array(); #take the tag of the first sentence
+		if ($getparentsentencetag_debug) {
+			print "Origianl Sent:".$thisoriginalsent."\n";
+		}
 		$tag = $modifier." ".$tag if $modifier =~/\w/;
 		$tag =~ s#[\[\]]##g;
 	}
@@ -1735,13 +1936,21 @@ sub getparentsentencetag{
 #return ($m, $t), the last word in $tag becomes new $t, the rest $m, both in []
 sub getpartsfromparenttag{
 	my $tag = shift;
+	print "getpartsfromparenttag\n";
+	print $tag;
 	if($tag =~/\[/){
 		$tag =~ s# (\w+\])$#][$1#;
 		$tag =~ /(\[.*?\])?(\[.*?\])/;
 		return ($1, $2);
+		print "case 1:\n";
+		print $1;
+		print $2;
 	}else{
 		$tag =~ /(.*?)\s*\b(\w+)$/;
 		return ($1, $2);
+		print "case 2:\n";
+		print $1;
+		print $2;
 	}
 }
 
@@ -1885,11 +2094,51 @@ sub andortag{
 			$tag =~ s#<\S+?>##g;
 			if($tag =~/\b$token\b/){
 				my $conj = $1;
+				
+			#dongye
+			#print STDOUT "\n";
+			#print STDOUT "tag!!!:\n";
+			#print STDOUT $tag;
+			#print STDOUT "\n";
+			#print STDOUT "hahahahahahahaha\n";
+			#print STDOUT "\n";
+			#print STDOUT "\n";
+			#print STDOUT "token!!!:\n";
+			#print STDOUT $token;
+			#print STDOUT "\n";
+			#print STDOUT "hahahahahahahaha\n";
+			#print STDOUT "\n";
+			#print STDOUT "\n";
+			#print STDOUT "conj!!!:\n";
+			#print STDOUT $conj;
+			#print STDOUT "\n";
+			#print STDOUT "hahahahahahahaha\n";
+			#print STDOUT "\n";			
+			#dongye
+				
+				
+				
+				
+				
+				
+				
 				$tag =~ s#,# $conj #g;
 				$tag =~ s#\s+# #g;
 				$tag =~ s#($conj )+#$1#g;
 				$tag =~ s#^\s+##g;
 				$tag =~ s#\s+$##g;
+				
+				
+			#dongye
+			#print STDOUT "\n";
+			#print STDOUT "tag after!!!:\n";
+			#print STDOUT $tag;
+			#print STDOUT "\n";
+			#print STDOUT "hahahahahahahaha\n";
+			#print STDOUT "\n";
+			#dongye				
+				
+				
 				tagsentwmt($sentid, $sentence, "", $tag, "andor[n&n]");
 				#$sth2 = $dbh->prepare("update ".$prefix."_sentence set tag = '$tag', modifier = '' where sentid = ".$sentid);
 				#$sth2->execute();
@@ -2102,6 +2351,7 @@ sub commaand{
 #based on "m o b" pattern
 
 sub unknownwordbootstrapping{
+    print "[unknownwordbootstrapping]enter\n" if $unknownwordbootstrapping_debug;
 	my ($sth,$sth1, $word,$sentence,$sentid, $o, $b, $m);
 	#my ($sth,$sth1, $word,$sentence,$sentid, $o, $b);
 
@@ -3311,10 +3561,19 @@ sub markupbypos{
 
 
 }
+# modifier.replaceAll("<\\S+?>","");
+# tag.replaceAll("<\\S+?>","");
+# remove stop words and forbidden words from the beginning and ending of modifier and tag
+# remove pronounns from modifier
+
+
 
 sub tagsentwmt{
 	my ($sentid, $sentence, $modifier, $tag, $label) = @_;
 	my ($sth1);
+	
+	print "Enter tagsentwmt\n" if $tagsentwmt_debug; 
+	
 	$modifier =~ s#<\S+?>##g;
 	$tag =~ s#<\S+?>##g;
 
@@ -3369,6 +3628,8 @@ sub tagsentwmt{
 	}
 	$sth1->execute() or print STDOUT "$label: sentid $sentid:<$tag> $sth1->errstr\n";
 	print "\n in $label: use modifier [$modifier], tag <$tag> to tag sentence $sentid: $sentence \n" if $debug and $label ne "normalizetags";
+	
+	print "Quite tagsentwmt\n" if $tagsentwmt_debug;
 }
 ############################################################################################
 ########################markupbypattern                    #################################
@@ -3398,8 +3659,11 @@ sub markupignore{
 	my ($sth);
 	#4/26/09
 	#$sth = $dbh->prepare("update ".$prefix."_sentence set tag = 'ignore', modifier='' where originalsent rlike '^$IGNOREPTN ' or originalsent rlike '[^,;.]+ $IGNOREPTN '");
+	print "markupignore\n" if $markupignore_debug;
+    print "Pattern: (^| )$IGNOREPTN\n" if $markupignore_debug;
 	$sth = $dbh->prepare("update ".$prefix."_sentence set tag = 'ignore', modifier='' where originalsent rlike '(^| )$IGNOREPTN ' ");
 	$sth->execute() or print STDOUT "$sth->errstr\n";
+	#print STDOUT "Markupignore Start!!!"
 
 
 }
@@ -3438,13 +3702,20 @@ sub untagsentences{
 #multitags: o, n, m, b
 sub knowntags{
 	my $mode = shift;
+    print "[knowntags]enter $mode\n" if $knowntags_debug;
 	my ($sth, $sth1, $sent, $sentid, $n, $m, $b, $b1, $o,$z, $word);
-	#gather nouns from wordpos
+	
+    # get a list of nouns from wordpos -Dongye
+    #gather nouns from wordpos and/or sentence
 	$sth = $dbh->prepare("select word from ".$prefix."_wordpos where pos ='p' or pos = 's'");
 	$sth->execute() or print STDOUT "$sth->errstr\n";
 	while(($word) = $sth->fetchrow_array()){
+        #print "[knowntags]\tget word: $word\n" if $knowntags_debug;
 		$n .= $word."|" if $word=~/^[a-zA-Z0-9_-]+$/;
+        #print "[knowntags]\tn after word added: $n\n" if $knowntags_debug;
 	}
+    
+    
 	if($mode eq "singletag"){
 		#additional nouns from tags
 		$sth = $dbh->prepare("select distinct tag from ".$prefix."_sentence where (tag != 'ignore' or isnull(tag)) and tag not like '% %' and tag not like '%[%' and tag not in (select word from ".$prefix."_wordpos where pos ='p' or pos = 's')");
@@ -3453,8 +3724,10 @@ sub knowntags{
 			$n .= $word."|" if  $word=~/^[a-zA-Z0-9_ -]+$/;
 		}
 	}
+    #remove the last "|"
 	chop($n);
 
+    # get o from sentence
 	if($mode ne "singletag"){
 		#Hong: Dec 9, try separate o tag
 		$sth = $dbh->prepare("select distinct tag from ".$prefix."_sentence where (tag != 'ignore' or isnull(tag)) and tag not like '% %' and tag not like '%[%'");
@@ -3487,13 +3760,19 @@ sub knowntags{
 		if($word =~/^[-\(\)\[\]\{\}\.\|\+\*\?]$/){
 			$b1 .= "\\".$word."|"; #b1 includes punct marks, not need for \b when matching
 		}elsif($word !~/\w/ && $word ne "/"){
-			$b1 .= $word."|" if $word=~/^[a-zA-Z0-9_-]+$/;
+            if ($word=~/^[a-zA-Z0-9_-]+$/) {
+                $b1 .= $word."|";
+                print "\n\n\n[yes]!!!";
+                print "Word: $word\n\n\n\n";
+            }
 		}else{
 			$b .= $word."|" if $word=~/^[a-zA-Z0-9_-]+$/;
 		}
 	}
 	chop($b);
 	chop($b1);
+    print "[knowntags]b ($b)\n\n" if $knowntags_debug;
+    print "[knowntags]b1 ($b1)\n\n" if $knowntags_debug;
 
 	#6/02/09
 	#gather proper nouns from wordpos
@@ -3504,6 +3783,7 @@ sub knowntags{
 	}
 	chop($z);
 
+    #print "[knowntags]return ($n, $o, $m, $b, $b1, $z)\n\n" if $knowntags_debug;
 	return ($n, $o, $m, $b, $b1, $z);
 }
 
@@ -3545,8 +3825,10 @@ sub tagunknowns{
 
 #mode: singletag or multitags
 #multitags tag words with all o n m b tags that are applicable to the words.
+# type: sentence or orginal
 sub tagallsentences{
 	my ($mode, $type) = @_;
+    print "[tagallsentences]enter ($mode, $type)\n" if $tagallsentences_debug;
 	my ($n, $o, $m, $b, $b1, $z) = knowntags($mode); #depending on the mode, $o could be empty #6/02/09 add $z
 	my ($sth, $sentid, $sent, $sth1);
 	if($type eq "original"){
@@ -3564,26 +3846,10 @@ sub tagallsentences{
     	$sent =~ s#^\s*##;                                 #trim
     	$sent =~ s#\s*$##;
 		$sent = annotateSent($sent, $n, $o, $m, $b, $b1, $z);
-		#$sent =~ s#'#\\'#g;
 		$sth1 = $dbh->prepare("update ".$prefix."_sentence set sentence ='$sent' where sentid =".$sentid);
 		$sth1->execute() or print STDOUT "$sth1->errstr\n";
 	}
-
-	#my ($sth, $sentid, $originalsent, $sth1);
-	#$sth = $dbh->prepare("select sentid, originalsent from ".$prefix."_sentence where (tag != 'ignore' or isnull(tag)) ");
-	#$sth->execute() or print STDOUT "$sth->errstr\n";
-	#while(($sentid, $originalsent) = $sth->fetchrow_array()){
-	#	$originalsent =~ s#<\S+?>##g; #remove any existing tag
-	#	$originalsent =~ tr/A-Z/a-z/;
-	#	$originalsent =~ s#\s*-\s*([a-z])#_\1#g;                   #cup_shaped, 3_nerved, 3-5 (-7)_nerved
-	#	$originalsent =~ s#(\W)# \1 #g;                            #add space around nonword char
-    #	$originalsent =~ s#\s+# #g;                                #multiple spaces => 1 space
-    #	$originalsent =~ s#^\s*##;                                 #trim
-    #	$originalsent =~ s#\s*$##;
-	#	$originalsent = annotateSent($originalsent, $n, $o, $m, $b, $b1);
-	#	$sth1 = $dbh->prepare("update ".$prefix."_sentence set sentence =\"".$originalsent."\" where sentid =".$sentid);
-	#	$sth1->execute() or print STDOUT "$sth1->errstr\n";
-	#}
+    print "[tagallsentences]return\n\n" if $tagallsentences_debug;
 }
 
 #depending on what is in n, o, m b, a word may or may not be tagged with multiple tags
@@ -3617,9 +3883,7 @@ sub annotateSent{
 	$sent =~ s#\b($m)\b#<M>$1</M>#g if $m =~ /\w/; #order matters, first tag <m>
 	$sent =~ s#\b($b)\b#<B>$1</B>#g if $b =~ /\w/; #then <b> so when double tagged <m><b>basal</b></m>
 	$sent =~ s#($b1)#<B>$1</B>#g if length $b1 > 0 ; #then <b> so when double tagged <m><b>basal</b></m>
-	#$sent =~ s#([\(\)\[\]\{\}])#<b>\1</b>#gi; #tag parentheses <b>
-	#$sent =~ s#((?:\(? ?\d+\W*)+)# <b>\1</b> #gi; # tag all numbers <b>. Not here. Need to tag tokens one by one
-	#print "$sent\n";
+    
 	if($sent=~/>\s*</){$sent =~ s#<(\w)>\s*</$1>##g;} #remove <></> and <> </>
 	$sent =~ s#(?:<[^<]+>)+($FORBIDDEN)(?:</[^<]+>)+#$1#g;
 	return $sent;
@@ -4162,24 +4426,56 @@ sub singular{
  if(getnumber($p) eq "p"){
     if($p =~ /(.*?[^aeiou])ies$/){
       $s = $1.'y';
+      # Dongye
+      print "case 1\n" if $singular_debug;
+      # Dongye
     }elsif($p =~/(.*?)i$/){
       $s = $1.'us';
+      # Dongye
+      print "case 2\n" if $singular_debug;
+      # Dongye
     }elsif($p =~/(.*?)ia$/){
       $s = $1.'ium';
+      # Dongye
+      print "case 3\n" if $singular_debug;
+      # Dongye
     }elsif($p =~/(.*?(x|ch|sh|ss))es$/){#3/12/09 add ss for recesses and processes
       $s = $1;
+      # Dongye
+      print "case 4\n" if $singular_debug;
+      # Dongye
     }elsif($p =~/(.*?)ves$/){
       $s = $1."f";
+      # Dongye
+      print "case 5\n" if $singular_debug;
+      # Dongye
     }elsif($p =~ /(.*?)ices/){
     	$s = $1."ex";
+    	# Dongye
+      print "case 6\n" if $singular_debug;
+      # Dongye
     }elsif($p =~/(.*?a)e$/ || $p=~/(.*?)s$/ ){#pinnae ->pinna, fruits->fruit
       $s = $1;
+      # Dongye
+      print "case 7\n" if $singular_debug;
+      # Dongye
     }
+    # Dongye
+    print "Method Singular\n" if $singular_debug;
+    print $p if $singular_debug;
+    print "\n" if $singular_debug;
+    print $s if $singular_debug;
+    print "\n" if $singular_debug;
+    # Dongye
   }
+  print "Return 1\n" if $singular_debug;
+  print "s: ".$s."\n" if $singular_debug;
   return $s if $s=~/\w/;
   my $singular = checkWN($p, "singular");
   #print "[$p]'s singular is $singular\n" if $debug;
   #print "out: $p\n";
+  print "Return 2\n" if $singular_debug;
+  print "s: ".$singular."\n" if $singular_debug;
   return $singular if $singular =~/\w/;
 }
 
@@ -4187,14 +4483,15 @@ sub singular{
 #bootstrapping using clues such as shared subject different boundary and one lead word
 sub additionalbootstrapping{
 	my $flag = 0;
-	print "Additional bootstrapping\n" if $debug;
-	do{
+	print "[additionalbootstrapping]Additional bootstrapping\n" if $additionalbootstrapping_debug;
+	#do{
 	   $flag = 0;
 	   $TAGS = currenttags();
+       	print "[additionalbootstrapping]Tags: $TAGS\n" if $additionalbootstrapping_debug;
 	   $flag += wrapupmarkup(); #shared subject different boundary
 	   $flag += oneleadwordmarkup($TAGS);#one lead word
 	   $flag += doitmarkup();
-	}while ($flag>0);
+	#}while ($flag>0);
 }
 
 sub currenttags{
@@ -4212,40 +4509,65 @@ sub currenttags{
 #skip and/or cases
 #skip leads with $stop words
 sub doitmarkup{
-	my ($id, $sent, $sth, $TAGS, $lead, $tag);
+	my ($id, $sent, $sth, $TAGS, $lead, $tag, $tag_debug);
 	my $sign = 0;
-	print "doit markup\n" if $debug;
-  	$sth = $dbh->prepare("Select sentid, lead, sentence from ".$prefix."_sentence where isnull(tag) or tag='' or tag='unknown'");
+	print "[doitmarkup]enter\n" if $doitmarkup_debug;
+  	$sth = $dbh->prepare("Select sentid, lead, sentence, tag from ".$prefix."_sentence where isnull(tag) or tag='' or tag='unknown'");
 	$sth->execute();
-	while(($id, $lead, $sent) = $sth->fetchrow_array()){
-		if($sent=~/^.{0,40} (nor|or|and|\/)/){next;}
-		if($lead=~/\b($stop)\b/){next;}
-		print "sentid: $id: " if $debug;
+	while(($id, $lead, $sent, $tag_debug) = $sth->fetchrow_array()){
+        print "[doitmarkup]id: $id\n" if $doitmarkup_debug;
+        print "[doitmarkup]lead: $lead\n" if $doitmarkup_debug;
+        print "[doitmarkup]sent: $sent\n" if $doitmarkup_debug;
+        print "[doitmarkup]tag: $tag_debug\n" if $doitmarkup_debug;
+        #case 1
+		if($sent=~/^.{0,40} (nor|or|and|\/)/){
+            print "[doitmarkup]case 1: next\n" if $doitmarkup_debug;
+            next;
+        }
+        # case 2
+		if($lead=~/\b($stop)\b/){
+            print "[doitmarkup]case 2: next\n" if $doitmarkup_debug;
+            next;
+        }
+		print "[doitmarkup]doit($id)\n" if $doitmarkup_debug;
  		($tag, $sign) = doit($id);   #for cases before relevant knowledge was learned.
     	if($tag =~/\w/){
+            # case 3
+            print "[doitmarkup]case 3\n" if $doitmarkup_debug;
+            print "[doitmarkup]tag($id, $tag)\n" if $doitmarkup_debug;
       		tag($id, $tag);
     	}
 	}
+    
+    print "[doitmarkup]return ($sign)\n" if $doitmarkup_debug;
 	return $sign;
  }
 
 sub oneleadwordmarkup{
 	my $TAGS = shift;
-	my ($id, $sent, $sth, $lead);
+	my ($tag, $id, $sent, $sth, $lead);
 	my $tags = $TAGS."|";
 	my $sign = 0;
 
-	print "one lead word markup\n" if $debug;
-	$sth = $dbh->prepare("Select sentid, lead, sentence from ".$prefix."_sentence where isnull(tag) and lead not like '% %'");
+	print "[oneleadwordmarkup]enter ($TAGS)\n" if $oneleadwordmarkup_debug;
+	$sth = $dbh->prepare("Select tag, sentid, lead, sentence from ".$prefix."_sentence where isnull(tag) and lead not like '% %'");
 	$sth->execute();
-	while(($id, $lead, $sent) = $sth->fetchrow_array()){
+	while(($tag, $id, $lead, $sent) = $sth->fetchrow_array()){
 		if($tags=~/\b$lead\|/){
+            if ($oneleadwordmarkup_debug) {
+                print "[oneleadwordmarkup]Select sent # %id\n";
+                print "[oneleadwordmarkup]\tTag: %tag\n";
+                print "[oneleadwordmarkup]\tsentence: %sentence\n";
+            }
 			tag($id, $lead);
 			$sign += update($lead, "n", "-", "wordpos", 1);
+            print "[oneleadwordmarkup]update ($lead, n, -, wordpos, 1)\n" if $oneleadwordmarkup_debug;
 		}#else{
 		#	tag($id, "unknown");
 		#}
 	}
+    
+    print "[oneleadwordmarkup]return $sign\n" if $oneleadwordmarkup_debug;
 	return $sign;
 }
 
@@ -4260,49 +4582,125 @@ sub oneleadwordmarkup{
 #e.g. stigmatic scar basal (n times) and stigmatic scar apical (m times) => stigmatic scar is the tag and scar is a noun.
 #what about externally like A; externally like B, functionally staminate florets, functionally staminate xyz?
 sub wrapupmarkup{
-  my ($sth, $sth1, $id,$id1, $lead, @words1, @words,@words2, $match, $flag, $ptn, $b, $ld);
-  print "wrapupmarkup\n" if $debug;
+  my ($sth, $sth1, $id,$id1, $lead, @words1, @words,@words2, $match, $flag, $ptn, $b, $ld, $testtag);
+  print "[wrapupmarkup]enter\n" if $wrapupmarkup_debug;
   my $sign = 0;
   my $checked = "#";
   #find n-grams, n > 1
-  $sth1 = $dbh->prepare("Select sentid, lead from ".$prefix."_sentence where isnull(tag)  and lead regexp \".* .*\" order by length(lead) desc" );#multiple-word leads
+  $sth1 = $dbh->prepare("Select sentid, lead, tag from ".$prefix."_sentence where isnull(tag)  and lead regexp \".* .*\" order by length(lead) desc" );#multiple-word leads
   $sth1->execute();
-  while(($id1, $lead) = $sth1->fetchrow_array()){
+  while(($id1, $lead, $testtag) = $sth1->fetchrow_array()){
 	  if($checked=~/#$id1#/){next;}
+      print "[wrapupmarkup]id1: $id1\n" if $wrapupmarkup_debug;
+      print "[wrapupmarkup]lead: $lead\n" if $wrapupmarkup_debug;
+      print "[wrapupmarkup]tag: $testtag\n" if $wrapupmarkup_debug;
       @words = split(/\s+/, escape($lead));
+      print "[wrapupmarkup]words: @words\n" if $wrapupmarkup_debug;
       @words1 = @words; #words in lead 1
+      print "[wrapupmarkup]words1: @words1\n" if $wrapupmarkup_debug;
       $words[@words-1] = "[^[:space:]]+\$"; #create the pattern to find other sentences sharing the same subject with different boundary words
+      print "[wrapupmarkup]words: @words\n" if $wrapupmarkup_debug;
       $match = join(" ", @words);
-      $sth = $dbh->prepare("Select distinct lead from ".$prefix."_sentence where lead regexp \"^".$match."\" and isnull(tag)" );
+      print "[wrapupmarkup]match: $match\n" if $wrapupmarkup_debug;
+      print "[wrapupmarkup]Select distinct lead from ".$prefix."_sentence where lead regexp \"^".$match."\" and isnull(tag)" if $wrapupmarkup_debug;
+      $sth = $dbh->prepare("Select distinct lead from ".$prefix."_sentence where lead regexp \"^".$match."\" and isnull(tag)\n" );
       my $z = 0;
       $sth->execute() or $z = 1;
+      print "[wrapupmarkup]z: $z\n" if $wrapupmarkup_debug;
+
+      # >1, means at least two
       if($sth->rows > 1){ # exist x y and x z, take x as the tag
           $match =~ s# \[\^\[.*$##; #shared
+          print "[wrapupmarkup]match: $match\n" if $wrapupmarkup_debug;
           $sth = $dbh->prepare("Select sentid, lead from ".$prefix."_sentence where lead like \"".$match."%\" and isnull(tag)" );
           $sth->execute();
 
           @words = split(/\s+/,$match); #shared part
           $ptn = getPOSptn(@words);#get from wordpos
+          print "[wrapupmarkup]ptn: $ptn\n" if $wrapupmarkup_debug;
+          #print "[wrapupmarkup]words: $words\n" if $wrapupmarkup_debug;
+          #print "[wrapupmarkup]words index: @words\n" if $wrapupmarkup_debug;
+          #print "[wrapupmarkup]words index+1: @words+1\n" if $wrapupmarkup_debug;
+          #print "[wrapupmarkup]words index: ".$words[@words]."\n" if $wrapupmarkup_debug;
+          #print "[wrapupmarkup]words -2 index: ".$words[@words-2]."\n" if $wrapupmarkup_debug;
+          print "[wrapupmarkup]checkWN: ".$words[@words-1]."\n" if $wrapupmarkup_debug;
+          # wnpos is the pos of the last word in the shared head
           my $wnpos = checkWN($words[@words-1], "pos");
+          print "[wrapupmarkup]checkWN returned: $wnpos\n" if $wrapupmarkup_debug;          
+          
           if($ptn =~ /[nsp]$/ || ($ptn =~/\?$/ && $wnpos  =~ /n/) ){ #functionally staminate x vs. y stops here. @words = "functionally statminate"
 	          while(($id, $ld) = $sth->fetchrow_array()){
+                print "[wrapupmarkup]id: $id\n" if $wrapupmarkup_debug;
+                print "[wrapupmarkup]ld: $ld\n" if $wrapupmarkup_debug;
 	          	my @words2 = split(/\s+/, $ld); #words in ld
+                
+                # check word3
+                print "check POSptn: ".$words2[@words]."\n" if $wrapupmarkup_debug;
+                # case 1
+                # words2 > words
+                
+                print "check POSptn: ".$words2[@words]."\n" if $wrapupmarkup_debug;
+                print "get:".getPOSptn($words2[@words])."\n" if $wrapupmarkup_debug;
+                
 	          	if(@words2 > @words && getPOSptn($words2[@words]) =~/[psn]/){ #very good apples, don't cut after good.
-	          		my $nb = @words2 > @words+1? $words2[@words+1] : ""; #may need to skip two or more words to find a noun.
-	          		splice(@words2, @words+1); #remove from @words+1
+                    print "[wrapupmarkup]Case 1\n" if $wrapupmarkup_debug;
+                    # +2 -Dongye
+                    # original: words1 = word1 word2 wordx -Dongye
+                    # shared head: words = word1 word2 -Dongye
+                    # current iteration: words2 = word1 word2 word3 word4 -Dongye
+                    # then nb = word4 -Dongye
+	          		my $nb = @words2 > @words+1? $words2[@words+1] : ""; #may need to skip two or more words to find a noun. 
+                    print "[wrapupmarkup]nb: $nb\n" if $wrapupmarkup_debug;
+	          		
+                    # get words + 1 -Dongye
+                    splice(@words2, @words+1); #remove from @words+1
+                    # word2 = word1 word2 word3 -Dongye
+                    print "[wrapupmarkup]words2: @words2\n" if $wrapupmarkup_debug;                    
 	          		my $nmatch = join(" ", @words2);
+                    # nmatch = word1 word2 word3 -Dongye
+                    print "[wrapupmarkup]nmatch: $nmatch\n" if $wrapupmarkup_debug;
 	          		tag($id, $nmatch) ; #save the last word in $match in noun?
+                    print "tag($id, $nmatch)\n" if $wrapupmarkup_debug;
+                    
+                    # match = word1 word2  -Dongye                   
 	          		tag($id1, $match);
+                    print "tag ($id1, $match)\n" if $wrapupmarkup_debug;
+                     
                		$sign += update($words2[@words2-1], "n", "-", "wordpos", 1);
+                    # last word of words2 is n -Dongye
+                    print "update (".$words2[@words2-1].", n, -, wordpos, 1)\n" if $wrapupmarkup_debug;
+                    
                		$sign += update($nb, "b", "", "wordpos", 1) if $nb ne "";
+                    if ($nb ne "") {
+                        print "update (".$nb.", b, , wordpos, 1)\n" if $wrapupmarkup_debug;
+                    }
+                    
                		$sign += update($words1[@words1-1], "b", "", "wordpos", 1);
+                    # last word of words1 is b -Dongye
+                    print "update (".$words1[@words1-1].", b, , wordpos, 1)\n" if $wrapupmarkup_debug;
+                # case 2
 	          	}else{
+                    print "[wrapupmarkup]Case 2\n" if $wrapupmarkup_debug;
+                    # b is the next word in words2 compare to words - dongye
 	          	    $b = @words2> @words? $words2[@words]: "";
+                    print "[wrapupmarkup]b: $b\n" if $wrapupmarkup_debug;
     		   		tag($id, $match) ; #save the last word in $match in noun?
+                    print "tag ($id, $match)\n" if $wrapupmarkup_debug;
     		   		tag($id1, $match); #Nov. 18 Hong added
+                    print "tag ($id1, $match)\n" if $wrapupmarkup_debug;
+                    
+                    #the last word of shared head is n
                		$sign += update($words[@words-1], "n", "-", "wordpos", 1); #shared tag
+                    print "update (".$words[@words-1].", n, -, wordpos, 1)\n" if $wrapupmarkup_debug;
+                    
+                    # 
                		$sign += update($b, "b", "", "wordpos", 1) if $b ne "";
+                    if ($b ne "") {
+                        print "update ($b, n, -, wordpos, 1)\n" if $wrapupmarkup_debug;
+                    }
+                    # last word of words1 is b -Dongye
                		$sign += update($words1[@words1-1], "b", "", "wordpos", 1);
+                    print "update (".$words1[@words1-1].", n, -, wordpos, 1)\n" if $wrapupmarkup_debug;
                	}
                	$checked .= $id."#";
               }
@@ -4316,9 +4714,11 @@ sub wrapupmarkup{
          #tag($id1, "unknown");
          $checked .= $id1."#";
       }
+      print "[wrapupmarkup]\n" if $wrapupmarkup_debug;
     }#while
 
-  return $sign;
+    print "[wrapupmarkup]return: $sign\n\n" if $wrapupmarkup_debug;
+    return $sign;
 }
 
 #escape [] {} and () for mysql regexp, not perl regrexp.
@@ -4460,54 +4860,86 @@ sub assigndefaulttag{
 ########use instance based learning for the remining unsolved cases
 sub discover{
 	my $status = shift;
+	
+	print "[discover]Enter discover - status: $status\n" if $discover_debug;
+	
   	#$status .= "|start" if $status eq "normal";
 	my ($sid, $sentence, @startwords, $pattern, @matched, $round, $sth, $new, $lead, $tag, $newdisc);
 	$sth = $dbh->prepare("select sentid,sentence,lead,tag from ".$prefix."_sentence where (tag != 'ignore' or isnull(tag)) and status = '$status'");
     $sth->execute();
 	while(($sid, $sentence, $lead, $tag) = $sth->fetchrow_array()){
-		if(ismarked($sid)){next;} #marked, check $sid for most recent info.
-		@startwords = split(/\s+/,$lead);
-		print "\n>>>>>>>>>>>>>>>>>>start an unmarked sentence [$sentence]\n" if $debug;
-		$pattern = buildpattern(@startwords);
-		print "Build pattern [$pattern] from starting words [@startwords]\n" if $debug;
+		print "[discover]\tSentence ID: $sid, tag: $tag\n" if $discover_debug;
+		print "[discover]\tSentence: $sentence\n" if $discover_debug;
+		print ismarked($sid) if $discover_debug;
+		print "\n" if $discover_debug; 
+		if(ismarked($sid)){
+			print "[discover]\tNot pass\n\n" if $discover_debug;
+			next;
+		} #marked, check $sid for most recent info.
+		else {
+            print "[discover]\tPass!\n\n" if $discover_debug;
+		}
+        @startwords = split(/\s+/,$lead);
+        
+        $pattern = buildpattern(@startwords);
+        print "[discover]\tBuild pattern [$pattern] from starting words [@startwords]\n" if $discover_debug;
 		if($pattern =~ /\w+/){
 			@matched = matchpattern($pattern, $status, 0); #ids of untagged sentences that match the pattern
 			$round = 1;
       		$new = 0;
-			do{
-			    print "####################round $round: rule based learning on ".@matched." matched sentences\n" if $debug;
+            do{
+			    print "[discover]\t####################round $round: rule based learning on ".@matched." matched sentences\n" if $debug;
 			    $new = rulebasedlearn(@matched); #grow %NOUNS, %BDRY, tag sentences in %SENTS, record %DECISIONS
           		$newdisc += $new;
-				print "##end round $round. made $new discoveries\n" if $debug;
+				print "[discover]\t##end round $round. made $new discoveries\n" if $debug;
 				$round++;
 			}while ($new > 0);
-			#$round = 1;
-			#$new = 0;
-			#do{
-			#    print "~~~~~~~~~~~~~~~~~~~~round $round: instance based learning on matched sentences\n" if $debug;
-			#    $new = instancebasedlearn(@matched);
-			#	$round++;
-			#}while($new > 0);
+			
 		}
-	}
+       }
+ print "[discover]return ($newdisc)\n" if $discover_debug;
  return $newdisc;
 }
 
 #sentences that match the pattern
 sub matchpattern{
-my($pattern, $status, $hastag) = @_;
-my ($stmt, $sth, @matchedids, $sentid, $sentence);
-if($hastag == 1){
-$stmt = "select sentid,sentence from ".$prefix."_sentence where status=\"$status\" and !isnull(tag)";
-}else{
-$stmt = "select sentid,sentence from ".$prefix."_sentence where status=\"$status\" and isnull(tag)";
+    my($pattern, $status, $hastag) = @_;
+    
+if ($matchpattern_debug) {
+    print "[matchpattern]Enter matchpattern\n";
+    print "[matchpattern]Pattern: $pattern\n";
+    print "[matchpattern]Status: $status\n";
+    print "[matchpattern]Hastag: $hastag\n";
 }
-$sth = $dbh->prepare($stmt);
-$sth->execute();
-while(($sentid, $sentence) = $sth->fetchrow_array()){
-	push(@matchedids, $sentid) if($sentence =~/$pattern/i)
+    
+    my ($stmt, $sth, @matchedids, $sentid, $sentence);
+    
+    if($hastag == 1){
+        $stmt = "select sentid,sentence from ".$prefix."_sentence where status=\"$status\" and !isnull(tag)";
+    }else{
+        $stmt = "select sentid,sentence from ".$prefix."_sentence where status=\"$status\" and isnull(tag)";
+    }
+    $sth = $dbh->prepare($stmt);
+    $sth->execute();
+    while(($sentid, $sentence) = $sth->fetchrow_array()){
+    
+if ($matchpattern_debug) {
+    if($sentence =~/$pattern/i) {
+        print "[matchpattern]Push Sentence #$sentid\n";
+        print "[matchpattern]Sentence: $sentence\n\n";
+    }
 }
-return @matchedids;
+        
+        push(@matchedids, $sentid) if($sentence =~/$pattern/i)
+    }
+    
+if ($matchpattern_debug) {
+    print "[matchpattern]Return @matchedids\n";
+    print "[matchpattern]Quite matchpattern\n";
+    print "\n";
+}
+
+    return @matchedids;
 }
 
 ####go over all un-decided sentences, solve these cases by using instance-based learning
@@ -4515,6 +4947,7 @@ return @matchedids;
 sub ismarked{
 	my $id = shift;
 	my $sth;
+	#print "select * from ".$prefix."_sentence where sentid=".$id." and !isnull(tag)\n" if $discover_debug;
 	$sth=$dbh->prepare("select * from ".$prefix."_sentence where sentid=".$id." and !isnull(tag)");
     $sth->execute();
 	return $sth->rows != 0;
@@ -4679,19 +5112,45 @@ sub markup{
 #if certainty is < 50%, replace POS with ?.
 sub getPOSptn{
 	my @words = @_;
+    
+if ($getPOSptn_debug) {
+    print "[getPOSptn]Enter getPOSptn\n";
+    print "[getPOSptn]Words: @words"."\n";
+}    
+    
 	my ($pos, $certainty, $role, $ptn, @posinfo, $word);
 	foreach $word (@words){
+    
+print "\t[getPOSptn]Check word: $word\n" if $getPOSptn_debug;    
+    
+        # return (pos,role, certaintyu/certaintyl)
 		@posinfo = checkposinfo($word,"one");
 		#@todo:test
 		#$pos = "?" if (@posinfo > 1); #if a word is marked as N and B, make it unknown
 		($pos, $role, $certainty)= ($posinfo[0][0],$posinfo[0][1],$posinfo[0][2]);
+
+print "\t\t[getPOSptn]posinfo: @posinfo\n" if $getPOSptn_debug;	
+print "\t\t[getPOSptn]Certainty: $certainty\n" if $getPOSptn_debug;			
+my $tem = tovalue($certainty);
+print "\t\t[getPOSptn]Certainty value: $tem\n" if $getPOSptn_debug;		
+		
 		if ($pos ne "?" && tovalue($certainty) <= 0.5){
-    		print "$word 's POS $pos has a certainty ".tovalue($certainty)." (<0.5). This POS is ignored\n" if $debug;
+    		print "[getPOSptn]$word 's POS $pos has a certainty ".tovalue($certainty)." (<0.5). This POS is ignored\n" if $getPOSptn_debug;	
 		   $pos = "?" ;
 		}
 		$ptn .= $pos;  	#pbb,sbb, sb?
+		
+print "\t\t[getPOSptn]Added POS $pos\n" if $getPOSptn_debug;			
+		
 	}
 	#chop($ptn);
+    
+if ($getPOSptn_debug) {
+    print "[getPOSptn]Return ptn: $ptn\n";
+    print "[getPOSptn]Quite getPOSptn\n";
+    print "\n"
+}    
+    
 	return $ptn;
 }
 
@@ -4701,15 +5160,30 @@ sub getPOSptn{
 ########by applying rules and clues to grow %NOUNS and %BDRY and to confirm tags
 ########create and maintain decision tables
 sub rulebasedlearn{
+	
+print "Enter rulebasedlearn\n" if $rulebasedlearn_debug;
+    
 	my @sentids = @_; #an array of sentences with similar starting words
+    
+print "SentIDs: @sentids\n" if $rulebasedlearn_debug;    
+    
 	my ($sign, $new, $tag, $sentid);
 	foreach $sentid (@sentids){
     	if(!ismarked($sentid)){#without decision ids
+    	    #dongye
+    	    print "doit\n" if $rulebasedlearn_debug;
 			($tag, $new) = doit($sentid);
 			tag($sentid, $tag);
 			$sign +=$new;
 		}
 	}
+    
+if ($rulebasedlearn_debug) {
+    print "Return sign: $sign\n";
+    print "Quite rulebasedlearn\n";
+    print "\n";
+}
+    
 	return $sign;
 }
 
@@ -4718,111 +5192,190 @@ sub rulebasedlearn{
 #if the tag need to be adjusted (not by doit function), also need to adjust certainty counts.
 
 sub doit{
+
+print "[doit]Enter doit\n" if $doit_debug;
+
 	my ($sentid) = shift;
+    
+print "[doit]SentID: $sentid\n" if $doit_debug;
+    
 	my ($tag, $sign, $ptn, $i,$t, @ws, @tws, @cws, $pos, $certainty);
 	my ($role, $start, $end, @t, $sentence, $sth, $lead, $sent);
 	$sth = $dbh->prepare("select sentence, lead from ".$prefix."_sentence where sentid = $sentid");
 	$sth->execute();
 	($sentence, $lead) = $sth->fetchrow_array();
 
-	#if($lead =~/\b(and|or|nor)\b/){
-	#	return ($tag,$sign);
-	#}
-
 	@ws = split(/\s+/,$lead);
 	$ptn = getPOSptn(@ws);
-	print "\nsentence: $sentence\n" if $debugp;
+    
+if ($doit_debug) {
+	print "[doit]sentence: $sentence\n";
+    print "[doit]lead: $lead\n";
+    print "[doit]Words: @ws\n";
+    print "[doit]ptn: $ptn\n";
+}
 
+    # case 1
 	if($ptn =~ /^[pns]$/){
+        print "[doit]Case 1\n" if $doit_debug;
     	#single-word cases, e.g. herbs, ...
     	$tag = $ws[0];
 		$sign += update($tag, $ptn,"-", "wordpos", 1);
-		print "Directly markup with tag: $tag\n" if $debugp;
-	}elsif($ptn =~ /ps/){#questionable
-	    #@todo test: stems multiple /ps/, stems 66/66, multiple 1/1
-		#Hong Dec 10: don't test on certainty, directly discount s.
-		print "Found [ps] pattern\n" if $debugp;
+		print "[doit]Directly markup with tag: $tag\n" if $doit_debug;
+	}
+    # case 2
+    elsif($ptn =~ /ps/){
+        print "[doit]Case 2\n" if $doit_debug;
+		print "[doit]Found [ps] pattern\n" if $doit_debug;
 		my $i = $+[0];    #end of the matching
 		my $s = $ws[$i-1];
 		$i = $-[0]; #start of the matching
 		my $p = $ws[$i];
-		#my @p = checkposinfo($p, "one");
-		#my @s = checkposinfo($s, "one");
-		#my ($pcertainty, $pcertaintyu, $pcertaintyl,$scertainty, $scertaintyu, $scertaintyl);
-		#($pos, $role, $pcertainty) = ($p[0][0], $p[0][1], $p[0][2]);
-		#($pos, $role, $scertainty) = ($s[0][0], $s[0][1], $s[0][2]);
-    	#($pcertaintyu, $pcertaintyl) = split(/\//, $pcertainty);
-    	#($scertaintyu, $scertaintyl) = split(/\//, $scertainty);
-    	#$pcertainty = $pcertaintyu/$pcertaintyl;
-    	#$scertainty = $scertaintyu/$scertaintyl;
-		#if($pcertainty >= $scertainty && $pcertaintyl >= $scertaintyl*2){
-		   #discount($s, "s", "b", "byone");
-       	   #print "discount $s pos of s\n" if $debugp;
+		
+        if ($doit_debug) {
+            print @ws."\n";
+            print $i."\n";
+            print @tws."\n";
+            print $tag."\n";
+            print "$#tws+1"."\n";
+       	}
 		   @tws = splice(@ws, 0, $i+1);   #up to the "p" inclusive
 		   $tag = join(" ",@tws);
-		   print "\t:determine the tag: $tag\n" if $debugp;
-		   $sign += update($p, "p", "-", "wordpos", 1);
-		   $sign += updatenn(0, $#tws+1, @tws); #up to the "p" inclusive
-		   #if($scertainty * $scertaintyl < 2){
-		     $sign += update($s, "b","", "wordpos", 1); #would discount $s's s pos s=>b
+		   print "[doit]\t:determine the tag: $tag\n" if $doit_debug;
+           
+           my ($return_sign);
+           $return_sign=0;
+           $return_sign = update($p, "p", "-", "wordpos", 1);
+		   $sign += $return_sign;
+           print "[doit]\t:update($p, p, -, wordpos, 1), return $return_sign\n" if $doit_debug;
+           
+		   $return_sign = updatenn(0, $#tws+1, @tws); #up to the "p" inclusive
+           $sign += $return_sign;
+           print "[doit]\t:updatenn(0, $#tws+1, @tws), return $return_sign\n" if $doit_debug;
+		   
+           #if($scertainty * $scertaintyl < 2){
+		     $return_sign = update($s, "b","", "wordpos", 1); #would discount $s's s pos s=>b
+             $sign += $return_sign;
+             print "[doit]\t:update($s, b, , wordpos, 1), return $return_sign\n" if $doit_debug;
 		   #}
-		#}elsif($pcertainty < $scertainty && $pcertaintyl < $scertaintyl*2){
-		#   discount($p, "p", "s", "byone");
-       	#   print "discount $p pos of p\n" if $debugp;
-		#   $sign += update($s, "s", "", "wordpos");
-       	#   #@todo: determine the tag?
-		#}
-   }elsif($ptn =~/p(\?)/){#case 3,7,8,9,12,21: p? => ?->%BDRY
-	  	#use up to the pl as the tag
+		
+    }
+    # case 3
+    elsif($ptn =~/p(\?)/){#case 3,7,8,9,12,21: p? => ?->%BDRY
+        #use up to the pl as the tag
 		#if ? is not "p"->%BDRY
 		#save any NN in %NOUNS, note the role of Ns
 		$i = $-[1];#index of ?
 		#what to do with "flowers sepals" when sepals is ?
-		print "Found [p?] pattern\n" if $debugp;
+        print "[doit]Case 3\n" if $doit_debug;
+		print "[doit]Found [p?] pattern\n" if $doit_debug;
+		
+		# case 3.1
 		if(getnumber($ws[$i]) eq "p"){    # pp pattern
+			print "[doit]Case 3.1\n" if $doit_debug;
 		    #$tag = $ws[$i-1];
        	   	$tag = $ws[$i];
 		   	$sign += update($tag, "p","-", "wordpos", 1);
            	my $sth = $dbh->prepare("insert into ".$prefix."_isA (instance, class) values (\"".$tag."\",\"".$ws[$i-1]."\")");
            	$sth->execute();
-           	print "\t:[p p] pattern: determine the tag: $tag\n" if $debugp;
-		}else{
+           	print "[doit]\t:[p p] pattern: determine the tag: $tag\n" if $doit_debug;
+		}
+		# case 3.2
+        else{
+        	print "[doit]Case 3.2\n" if $doit_debug;
 		    @cws = @ws;
     		@tws = splice(@ws,0,$i);#get tag words, @ws changes as well
     		$tag = join(" ",@tws);
-    		print "\t:determine the tag: $tag\n" if $debugp;
-    		print "\t:updates on POSs\n" if $debugp;
-    		$sign += update($cws[$i], "b", "", "wordpos", 1);
-			$sign += update($cws[$i-1],"p", "-", "wordpos", 1);
-			$sign += updatenn(0,$#tws+1, @tws);
+    		print "[doit]\t:determine the tag: $tag\n" if $doit_debug;
+    		print "[doit]\t:updates on POSs\n" if $doit_debug;
+    		
+    		my $tem = 0;
+    		
+    		
+    		$tem = update($cws[$i], "b", "", "wordpos", 1);
+    		$sign += $tem;
+print "update1 returned $tem\n" if $doit_debug;
+    		
+			$tem = update($cws[$i-1],"p", "-", "wordpos", 1);
+			$sign += $tem;
+print "update2 returned $tem\n" if $doit_debug;			
+			
+			$tem = updatenn(0,$#tws+1, @tws);
+			$sign += $tem;
+print "updatenn returned $tem\n" if $doit_debug;
+			
 		}
-	}elsif($ptn =~ /[psn](b)/){#case 2,4,5,11,6,20: nb => collect the tag
+	}
+    # case 4
+    elsif($ptn =~ /[psn](b)/){#case 2,4,5,11,6,20: nb => collect the tag
 		#use up to the N before B as the tag
 		#save NN in %NOUNS, note the role of Ns
 		#anything may be learned from rule 20?
+		print "Case 4\n" if $doit_debug;
+		
+		# case 4.1
 		if($ptn =~ /^sbp/){
-			print "Found [sbp] pattern\n" if $debugp;
+			print "[doit]Case 4.1\n" if $doit_debug;
+			print "[doit]Found [sbp] pattern\n" if $doit_debug;
 			@cws = @ws;
 			$tag = join(" ", splice(@cws, 0, 3));
-			print "\t:determine the tag: $tag\n" if $debugp;
-		}else{
-			print "Found [[psn](b)] pattern\n" if $debugp;
+			print "[doit]\t:determine the tag: $tag\n" if $doit_debug;
+		}
+		# case 4.2
+        else{
+        	print "[doit]Case 4.2\n" if $doit_debug;
+			print "[doit]Found [[psn](b)] pattern\n" if $doit_debug;
 			$i = $-[1]; #index of b
-			$sign += update($ws[$i], "b","", "wordpos", 1);
+            
+            print "index of b: $i\n" if $doit_debug;
+            
+            my($sign1, $sign2, $sign3);
+            
+            # update b word
+            $sign1 = $sign;
+			$sign1 += update($ws[$i], "b","", "wordpos", 1);
+            
+            
+            print "update1 - p1: $ws[$i]\n" if $doit_debug;
+            print "[doit]sign1: $sign1\n" if $doit_debug;
+            
 			@cws = @ws;
 			@tws = splice(@ws,0,$i);#get tag words, @ws changes.
 			$tag = join(" ",@tws);
-			$sign += update($cws[$i-1], substr($ptn, $i-1, 1), "-", "wordpos", 1);
-			$sign += updatenn(0, $#tws+1,@tws);
-			print "\t:determine the tag: $tag\n" if $debugp;
-			print "\t:updates on POSs\n" if $debugp;
+            
+            print "Tag: $tag\n" if $doit_debug;
+            
+            # get the pos letter before the b word
+            $sign2 = $sign1;
+			$sign2 += update($cws[$i-1], substr($ptn, $i-1, 1), "-", "wordpos", 1);
+            
+            print "update2 - p1: $cws[$i-1]\n" if $doit_debug;
+            print "update2 - p2: ".substr($ptn, $i-1, 1)."\n" if $doit_debug;
+            print "[doit]sign2: $sign2\n" if $doit_debug;
+            
+            $sign3 = $sign2;
+			$sign3 += updatenn(0, $#tws+1,@tws);
+            
+            print "tws: @tws\n" if $doit_debug;
+            print "updatenn - p2: $#tws+1\n" if $doit_debug;
+            print "updatenn - p3: @tws\n" if $doit_debug;
+            print "[doit]sign3: $sign3\n" if $doit_debug;
+            
+            $sign = $sign3;
+            
+            print "[doit]sign: $sign\n" if $doit_debug;
+			print "[doit]\t:determine the tag: $tag\n" if $doit_debug;
+			print "[doit]\t:updates on POSs\n" if $doit_debug;
 		}
-	}elsif($ptn =~ /([psn][psn]+)/){#case 1,3,10,19: nn is phrase or n2 is a main noun
+	}
+    # case 5
+    elsif($ptn =~ /([psn][psn]+)/){#case 1,3,10,19: nn is phrase or n2 is a main noun
 		#if nn is phrase or n2 is a main noun
 		#make nn the tag
 		#the word after nn ->%BDRY
 		#save NN in %NOUNS, note the role of Ns
-		print "Found [[psn][psn]+] pattern\n" if $debugp;
+		print "[doit]Case 5\n" if $doit_debug;
+		print "[doit]Found [[psn][psn]+] pattern\n" if $doit_debug;
 		#3/5/09: check the pattern for words following the ptn
 		$start = $-[1];
 		$end = $+[1]; #the last of the known noun
@@ -4832,8 +5385,14 @@ sub doit{
 		my @moren = split(/\s+/, $moren);
     	#if contain pp, take the last p as the tag
     	#otherwise, take the whole pattern
+    	
+    	# case 5.1
     	if($ptn =~ /pp/){
+    		print "[doit]Case 5.1\n" if $doit_debug;
+    		
+    		# case 5.1.1
     		if($moreptn =~/^p*(s)/){
+    			print "[doit]Case 5.1.1\n" if $doit_debug;
     			#find $lastp and $safterp, then reset $safterp to "b"
     			my $isafterp = $-[1];
     			my $ilastp = $isafterp-1;
@@ -4842,26 +5401,34 @@ sub doit{
     			$bword = $safterp;
     			$tag = $lastp =~/\w/ ? $lastp : $ws[rindex($ptn,"p")];
     			$sign += update($safterp,"b","", "wordpos", 1); #discount s to b
-			}elsif($moreptn =~/^(p+)/){
+			}
+			# case 5.1.2
+            elsif($moreptn =~/^(p+)/){
+            	print "[doit]Case 5.1.2\n" if $doit_debug;
     			my $ilastp = $+[1];
     			$tag = $moren[$ilastp];
-			}else{
+			}
+            else{
+            	print "[doit]Case 5.1.3\n" if $doit_debug;
     	   		my $i = rindex($ptn, "p");
        			$tag = $ws[$i];   #may be rejected later
     		}
        		@t = checkposinfo($tag, "one");#last p is the tag
        		#my $sth = $dbh->prepare("insert into ".$prefix."_isA (instance, class) values (\"".$tag."\",\"".$ws[$i-1]."\")");
        		#$sth->execute();
-    	}else{#not pp
+    	}
+        else{#not pp
     		#the whole ptn + $moren
+    		print "[doit]Case 5.2\n" if $doit_debug;
        		@tws = splice(@ws, 0, $end);#get everything up to and include nn
        		$tag = join(" ",@tws);      #may be rejected later
        		$tag .= " ".$moren if $moren =~/\w/;
        		@t = checkposinfo(substr($tag, rindex($tag, " ")+1), "one");
     	}
     	($pos, $role, $certainty) = ($t[0][0], $t[0][1], $t[0][2]);  #last n
-    	#if($pos=~/[psn]/ && $role =~ /[-+]/){
+
     	if($pos=~/[psn]/){#3/15/09 relax this condition
+    		print "[doit]Case x: relax this condition\n" if $doit_debug;
     		@t = split(/\s+/,$sentence);
     		$sign += update($bword,"b","", "wordpos", 1); #@todo:test
     		#update pos for each word in the ptn and morenptn
@@ -4872,142 +5439,95 @@ sub doit{
     			$sign += update($t[$i], substr($tptn, $i, 1), "-", "wordpos", 1) if $i == length($tptn) -1 ;
     		}
 			$sign += updatenn(0, length($tptn), @t) if @t > 1;
-    	}#else{ #5/30/09
-    	#	print "\t:$tag not main role, reset tag to null\n" if $debugp;
-		#    $tag = "";
-  		#}
-
-		#before 3/5/09
-		#$start = $-[1];
-		#$end = $+[1]; #the last of the known noun
-		#@cws = @ws;
-
-    	##if contain pp, take the last p as the tag
-    	##otherwise, take the whole pattern
-    	#if($ptn =~ /pp/){
-    	#		my $i = rindex($ptn, "p");
-       	#		$tag = $ws[$i];   #may be rejected later
-       	#		@t = checkposinfo($tag, "one");#last p is the tag
-       	#		$end = $i+1;
-       	#		my $sth = $dbh->prepare("insert into ".$prefix."_isA (instance, class) values (\"".$tag."\",\"".$ws[$i-1]."\")");
-       	#		$sth->execute();
-    	#}else{#not pp
-       	#	#@tws = splice(@ws,$start, $end-$start);#get nn tag words
-       	#	@tws = splice(@ws, 0, $end);#get everything up to and include nn
-       	#	$tag = join(" ",@tws);      #may be rejected later
-       	#	@t = checkposinfo($tws[@tws-1], "one");
-    	#}
-    	#($pos, $role, $certainty) = ($t[0][0], $t[0][1], $t[0][2]);  #last n
-    	#if($pos=~/[psn]/ && $role =~ /[-+]/){
-    	#	#the word after nn ->%BDRY
-    	#	@t = split(/\s+/,$sentence);
-    	#	$sign += update($t[$end],"b","", "wordpos"); #@todo:test
-		#	$sign += update($cws[$start], substr($ptn, $start, 1), "", "wordpos") if $start < $end;
-		#	$sign += updatenn(0, $#tws+1, @tws) if @tws > 1;
-    	# 	$sign += update($cws[$start+1], substr($ptn, $start+1, 1), "", "wordpos") if $start+1 < $end;
-    	#}else{
-    	#	print "\t:$tag not main role, reset tag to null\n" if $debugp;
-		#    $tag = "";
-  		#}
-
-		#earlier
-		#if($ptn =~/pp/){
-    	#	$tag = $ws[$start];
-		#	  @t = checkposinfo($tag, "one");#first p is the tag
-		#}else{
-    	#		@tws = splice(@ws,$start, $end-$start);#get tag words
-    	#		$tag = join(" ",@tws);
-		#	  @t = checkposinfo($tws[@tws-1], "one");
-		#}
- 	  	#($pos, $role, $certainty) = ($t[0][0], $t[0][1], $t[0][2]);  #last n
-    	#if($pos=~/[psn]/ && $role =~ /[-+]/){   #pp got processed again!?
-    		#the word after nn ->%BDRY
-    	#		@t = split(/\s+/,$sentence);
-    	#		$sign += update($t[$end],"b",""); #@todo:test
-		#	  $sign += update($cws[$start], substr($ptn, $start, 1), "");
-		#	  $sign += updatenn(0, $#tws+1, @tws);
-    	#	  $sign += update($cws[$start+1], substr($ptn, $start+1, 1), "");
-    	#}else{
-    	#		print "\t:$tag not main role, reset tag to null\n" if $debug;
-		#	  $tag = "";
-  		#}
-   		print "\t:determine the tag: $tag\n" if $debugp;
-	#}elsif($ptn =~ /b\?([psn])$/ or $ptn=~/\?b([psn])$/){#case 16, 25
-	}elsif($ptn =~ /b[?b]([psn])$/ or $ptn=~/[?b]b([psn])$/){#case 16, 25 #3/5/09
+    	}
+   		print "[doit]\t:determine the tag: $tag\n" if $doit_debug;
+	}
+    # case 6
+    elsif($ptn =~ /b[?b]([psn])$/ or $ptn=~/[?b]b([psn])$/){#case 16, 25 #3/5/09
 		#if n can be a main noun
 		#make up to n the tag
 		#the word after n ->%BDRY
-		print "Found [b?[psn]\$] or  [?b[psn]\$] pattern\n" if $debugp;
+		print "[doit]Case 6\n" if $doit_debug;
+		print "[doit]Found [b?[psn]\$] or [[?b]b([psn])\$] pattern\n" if $doit_debug;
 		$end = $-[1];#index of n
+        print "[doit]end: $end\n" if $doit_debug;
 		my $cend = $end;
 		my ($moren, $moreptn, $bword) = getNounsAfterPtn($sentence, $end+1);
+        print "[doit]moren: $moren\n" if $doit_debug;
+        print "[doit]moreptn: $moreptn\n" if $doit_debug;
+        print "[doit]bword: $bword\n" if $doit_debug;
 		@ws = tokenize($sentence, "firstseg");
+        print "[doit]ws: @ws\n" if $doit_debug;
 		@cws = @ws;
 		$end += length($moreptn);
+        print "[doit]end: $end\n" if $doit_debug;
 		@tws = splice(@cws, 0, $end+1);
+        print "[doit]tws: @tws\n" if $doit_debug;
 		$tag = join(" ",@tws);
-		#@t = checkposinfo($tws[$end],"one");#n's posinfo
-		#($pos, $role, $certainty) = ($t[0][1], $t[0][1], $t[0][2]);
-		#if($role =~ /[-+]/ || $pos eq "p"){#3/15/09 remove this condition
-			print "\t:updates on POSs\n" if $debugp;
-			$sign += update($bword,"b","", "wordpos", 1) if $bword =~/\w/; #test
-			my $tptn = $ptn.$moreptn;
-			for(my $i =$cend; $i < length($tptn); $i++){
-				$sign += update($ws[$i], substr($tptn, $i, 1), "_", "wordpos", 1) if $i != length($tptn) - 1;
-				$sign += update($ws[$i], substr($tptn, $i, 1), "-", "wordpos", 1) if $i == length($tptn) - 1;
-			}
-		#}else{
-		#	print "\t:$cws[$end] not main role, reset tag to null\n" if $debugp;
-		#	$tag = "";
-		#}
-
-		#before 3/5/09
-		#$end = $-[1];#index of n
-		#@cws = @ws;
-		#@tws = splice(@ws, 0, $end+1);
-		#$tag = join(" ",@tws);
-		#@t = checkposinfo($cws[$end],"one");#n's posinfo
-		#($pos, $role, $certainty) = ($t[0][1], $t[0][1], $t[0][2]);
-		#if($role =~ /[-+]/){
-		#	#the word after n ->%BDRY
-      	#	@t = tokenize($sentence, "firstseg");
-		#	print "\t:updates on POSs\n" if $debugp;
-		#	$sign += update($t[$end+1],"b","", "wordpos"); #test
-		#	#$sign += update($cws[$end-2], "b", "");
-		#	$sign += update($cws[$end], substr($ptn, $end, 1), $role, "wordpos");
-		#}else{
-		#	print "\t:$cws[$end] not main role, reset tag to null\n" if $debugp;
-		#	$tag = "";
-		#}
-		print "\t:determine the tag: $tag\n" if $debugp;
-	}elsif($ptn =~ /^s(\?)$/){
-	    #? =>b
-		#@todo:test, need test
+        print "[doit]tag: $tag\n" if $doit_debug;
+		print "[doit]\t:updates on POSs\n" if $doit_debug;
+		$sign += update($bword,"b","", "wordpos", 1) if $bword =~/\w/; #test
+		my $tptn = $ptn.$moreptn;
+		for(my $i =$cend; $i < length($tptn); $i++){
+            if ($i != length($tptn) - 1) {
+                print "[doit]case 6.1\n" if $doit_debug;
+                $sign += update($ws[$i], substr($tptn, $i, 1), "_", "wordpos", 1);
+                print "[doit]update(".$ws[$i].", ".substr($tptn, $i, 1).", _, wordpos, 1)\n" if $doit_debug;
+            }
+            if ($i == length($tptn) - 1) {
+                print "[doit]case 6.2\n" if $doit_debug;
+                $sign += update($ws[$i], substr($tptn, $i, 1), "-", "wordpos", 1);
+                print "[doit]update(".$ws[$i].", ".substr($tptn, $i, 1).", -, wordpos, 1);\n" if $doit_debug;
+            }
+		}
+		print "[doit]\t:determine the tag: $tag\n" if $doit_debug;
+	}
+    # case 7
+    elsif($ptn =~ /^s(\?)$/){
 		$i = $-[1];#index of ?
-		print "Found [^s?\$] pattern\n" if $debugp;
+		print "[doit]Case 7\n" if $doit_debug;
+		print "[doit]Found [^s?\$] pattern\n" if $doit_debug;
 		my $wnp = checkWN($ws[$i], "pos");
+		
+		# case 7.1
 		if($wnp =~/p/){ #"hinge teeth,"
+			print "[doit]Case 7.1\n" if $doit_debug;
 			$tag = $ws[$i-1]." ".$ws[$i];
-			print "\t:determine the tag: $tag\n" if $debugp;
-			print "\t:updates on POSs\n" if $debugp;
+			print "[doit]\t:determine the tag: $tag\n" if $doit_debug;
+			print "[doit]\t:updates on POSs\n" if $doit_debug;	
 			my $n = getnumber($ws[$i]);
 			$sign += update($ws[$i], $n, "-", "wordpos", 1);
-		}else{
+		}
+		# case 7.2
+        else{
+        	print "[doit]Case 7.2\n" if $doit_debug;
 			$tag = $ws[$i-1];
-			print "\t:determine the tag: $tag\n" if $debugp;
-			print "\t:updates on POSs\n" if $debugp;
+			print "[doit]\t:determine the tag: $tag\n" if $doit_debug;	
+			print "[doit]\t:updates on POSs\n" if $doit_debug;	
 			$sign += update($ws[$i], "b", "", "wordpos", 1);
 			$sign += update($ws[$i-1], "s", "-", "wordpos", 1);
 		}
-	}elsif($ptn =~ /^bs$/){
+	}
+    # case 8
+    elsif($ptn =~ /^bs$/){
+    	print "[doit]Case 8\n" if $doit_debug;
 	    $tag = join(" ", @ws);
 		$sign += update($ws[0], "b", "", "wordpos", 1);
+        print "[doit]\tupdate("."$ws[0]".", b, , wordpos, 1)\n" if $doit_debug;	
 		$sign += update($ws[1], "s", "-", "wordpos", 1);
-	}elsif($ptn =~ /^bp$/){
+        print "[doit]\tupdate("."$ws[1]".", s, -, wordpos, 1)\n" if $doit_debug;	
+	}
+    # case 9
+    elsif($ptn =~ /^bp$/){
+    	print "[doit]Case 9\n" if $doit_debug;
 	    $tag = join(" ", @ws);
 		$sign += update($ws[0], "b", "", "wordpos", 1);
+        print "[doit]\tupdate("."$ws[0]".", b, , wordpos, 1)\n" if $doit_debug;	
 		$sign += update($ws[1], "p", "-", "wordpos", 1);
-	}elsif($ptn =~ /^\?(b)/){#case 8,17,22,23,24,26: ?b => ?->%NOUNS. Note: ? could also be a type modifier such as middle as in middle sessile
+        print "[doit]\tupdate("."$ws[1]".", p, -, wordpos, 1)\n" if $doit_debug;	
+	}
+    # case 10
+    elsif($ptn =~ /^\?(b)/){#case 8,17,22,23,24,26: ?b => ?->%NOUNS. Note: ? could also be a type modifier such as middle as in middle sessile
 		#?->%NOUNS, note the role of ?
 		#use up to ? as the tag ===>
 		#$ptn=~/\?(b)/
@@ -5027,63 +5547,80 @@ sub doit{
 		#			  for [lateral]: old pos [] is updated
 		#			  to the new pos [pos:s;certainty:1/1;role:-]
 		#@todo: check "leaves" and "basally" in a dictionary to determine how to update on their POSs
-		print "Found [?(b)] pattern\n" if $debugp;
+		print "[doit]Case 10\n" if $doit_debug;
+		print "[doit]Found [?(b)] pattern\n" if $doit_debug;
 
 			$i = $-[1];#index of (b)
 			$sign += update($ws[$i], "b", "", "wordpos", 1);
 	    	@cws = @ws;
 			@tws = splice(@ws,0,$i);#get tag words
 			$tag = join(" ",@tws);
+            print "[doit]tag: $tag\n" if $doit_debug;
 	    	my $word = $cws[$i-1]; #the "?" word;
-	   		if(!followedbyn($sentence, $lead)){	#condition added 4/7/09
-	    	#my $wnp = checkWN($word, "pos");
-	    	#my ($maincount, $modicount) = getroles($word);
-	    	#print "main role = $maincount; modifier role = $modicount\n" if $debugp; #both are empty values
-	    	#if(($wnp eq "" || $wnp =~ /[psn]/) && $maincount >= $modicount){#tag is not an adv or adj such as abaxially or inner
-			 # print "\t: $word checkWN pos: $wnp\n" if $debug;
-			 #print "\t:determine the tag: $tag\n" if $debugp;
-			 # print "\t:updates on POSs\n" if $debugp;
-			 # $sign += update($cws[$i-1], "n", "-", "wordpos");
-			 # $sign += updatenn(0,$#tws,@tws);
-
-			#decision revoked Dec 8, 2008 Hong: ?b pattern works well when ? is a plural noun, not so well when ? is a type modifier
-	    	#so tighten up the pattern, make a decision only when ? is a plural noun
-
-			#my $wnp = getnumber($word);
-			#if()$wnp eq "p"){#tag is not an adv or adj such as abaxially or inner
-			#  print "\t:determine the tag: $tag\n" if $debugp;
-			#  print "\t:updates on POSs\n" if $debugp;
-			#  $sign += update($cws[$i-1], "n", "-", "wordpos");
-			#  $sign += updatenn(0,$#tws,@tws);
-
-			#3/12/09
-			my $wnp1 = checkWN($word, "pos");
-			my $wnp2 = getnumber($word) if $wnp1 !~/\w/;
-			$wnp1 = "" if $wnp1 =~/[ar]/;
-			if($wnp1=~/[psn]/ || $wnp2 =~ /[ps]/){#tag is not an adv or adj such as abaxially or inner
-				print "\t:determine the tag: $tag\n" if $debugp;
-				print "\t:updates on POSs\n" if $debugp;
-				$sign += update($cws[$i-1], "n", "-", "wordpos", 1);
-				$sign += updatenn(0,$#tws,@tws);
-	    	}else{
-	    		#$sign += update($word, "b", "", "wordpos"); #line added 4/7/09
-			  print "\t:$tag is adv/adj or modifier. skip.\n" if $debugp;
-	      	  $tag = "";
-	    	}
-		}else{#4/7/09
-			#$sign += update($word, "b", "", "wordpos");
-			print "\t:$tag is adv/adj or modifier. skip.\n" if $debugp;
-	      	$tag = "";
-		}
-	}else{
-		print "Pattern [$ptn] is not processed\n" if $debugp;
+            print "[doit]word: ".$cws[$i-1]."\n" if $doit_debug;
+	    	
+	    	# case 10.1
+	   		if(!followedbyn($sentence, $lead)) {	#condition added 4/7/09
+	   			print "[doit]Case 10.1\n" if $doit_debug;
+                print "[doit]Word: $word\n" if $doit_debug;
+                my $wnp1 = checkWN($word, "pos");
+                print "[doit]wnp1: $wnp1\n" if $doit_debug;
+                if ($doit_debug) {
+                    if ($wnp1 !~/\w/) {
+                        print "[doit]true\n";
+                    }
+                    else {
+                        print "[doit]false\n"
+                    }
+                }
+                my $wnp2 = getnumber($word) if $wnp1 !~/\w/;
+                print "[doit]wnp2: $wnp2\n" if $doit_debug;
+                $wnp1 = "" if $wnp1 =~/[ar]/;
+                print "[doit]wnp1: $wnp1\n" if $doit_debug;
+                
+                # case 10.1.1
+                if($wnp1=~/[psn]/ || $wnp2 =~ /[ps]/){#tag is not an adv or adj such as abaxially or inner
+                	print "[doit]Case 10.1.1\n" if $doit_debug;
+                    print "[doit]\t:determine the tag: $tag\n" if $doit_debug;	
+                    print "[doit]\t:updates on POSs\n" if $doit_debug;	
+                    print "[doit]update($cws[$i-1], n, -, wordpos, 1)\n" if $doit_debug;	
+                    print "[doit]updatenn(0,$#tws,@tws)\n" if $doit_debug;	                    
+                    $sign += update($cws[$i-1], "n", "-", "wordpos", 1);
+                    $sign += updatenn(0,$#tws,@tws);
+                }
+                # case 10.1.2
+                else{
+                	print "[doit]Case 10.1.2\n" if $doit_debug;	    		
+                    print "[doit]\t:$tag is adv/adj or modifier. skip.\n" if $doit_debug;	
+                    $tag = "";
+                }
+            }
+            # case 10.2
+            else{		
+            	print "[doit]Case 10.2\n" if $doit_debug;	
+                print "[doit]\t:$tag is adv/adj or modifier. skip.\n" if $doit_debug;	
+                $tag = "";
+            }
 	}
+    # case 0
+    else{
+    	print "[doit]Case 0\n" if $doit_debug;
+		print "[doit]Pattern [$ptn] is not processed\n" if $doit_debug;
+	}
+    
+    print "[doit]Return tag: $tag, sign: $sign\n" if $doit_debug;
+    print "[doit]Quit doit\n" if $doit_debug;
+    print "\n" if $doit_debug;
+    
 	return ($tag,$sign);
 }
+
 #4/7/09
 #return true if lead is followed by a N without any proposition in between
 sub followedbyn{
 	my ($sentence, $lead) = @_;
+    print "[followedbyn]enter ($sentence, $lead)\n" if $followedbyn_debug;
+    
 	$lead = escape($lead);
 	$sentence =~ s#^$lead##;
 	my $word;
@@ -5095,49 +5632,69 @@ sub followedbyn{
 	}
 	$knownnouns =~ s#\|+#|#g;
 	$knownnouns =~ s#\|\s*$##;
+    print "[followedbyn]knownnouns: $knownnouns\n" if $followedbyn_debug;
 	if ($sentence =~/(.*?)\b($knownnouns)\b/){
 		my $inbetween = $1;
+        print "[followedbyn]inbetween: $1\n" if $followedbyn_debug;
+        print "[followedbyn]noun: $2\n" if $followedbyn_debug;
+        print "[followedbyn]inbetween: $1\n" if $followedbyn_debug;
+        if ($inbetween !~ /\b($PREPOSITION)\b/) {
+            print "[followedbyn]return 1\n" if $followedbyn_debug;
+        }
 		return 1 if $inbetween !~ /\b($PREPOSITION)\b/;
 	}
+    print "[followedbyn]return 0\n" if $followedbyn_debug;
 	return 0;
 }
 
 #3/5/09
 sub getNounsAfterPtn{
 	my ($sentence, $startwordindex) = @_;
+    print "[getNounsAfterPtn] enter ($sentence, $startwordindex)\n" if $getNounsAfterPtn_debug;
 	my ($ns, $nptn, $bword);
 	my @words = tokenize($sentence, "firstseg");
+    print "[getNounsAfterPtn] words: @words\n" if $getNounsAfterPtn_debug;
 	@words = splice(@words, $startwordindex);
+    my ($i);
+    for($i = 0; $i < @words; $i++){
+        print "[getNounsAfterPtn] word $i: $words[$i]\n" if $getNounsAfterPtn_debug;
+    }
+    print "[getNounsAfterPtn] words after splice: @words\n" if $getNounsAfterPtn_debug;
+    print "[getNounsAfterPtn] words after splice: ".join("##", @words)."\n" if $getNounsAfterPtn_debug;
 	my $ptn = getPOSptn(@words);
+    print "[getNounsAfterPtn] ptn: $ptn\n" if $getNounsAfterPtn_debug;
 	#5/01/09
 	if($ptn=~/^([psn]+)/ or $ptn=~/^(\?+)/){
 		my $end = $+[1]-1;
+        print "[getNounsAfterPtn] end: $end\n" if $getNounsAfterPtn_debug;
 		$bword = $words[$end+1] if $end+1 < @words;
+        print "[getNounsAfterPtn] bword: $bword\n" if $getNounsAfterPtn_debug;
 		my @nwords = splice(@words, 0, $end+1);
+        print "[getNounsAfterPtn] nwords: @nwords\n" if $getNounsAfterPtn_debug;
 		for(my $i = 0; $i<@nwords; $i++){
 			my $p = substr($ptn, $i, 1);
+            print "[getNounsAfterPtn] p: $p\n" if $getNounsAfterPtn_debug;
 			$p = $p eq "?" ? checkWN($nwords[$i], "pos") : $p;
+            print "[getNounsAfterPtn] p: $p\n" if $getNounsAfterPtn_debug;
 			if ($p =~/^[psn]+$/){ #5/01/09 check 4228 5/23/09 add+ check 5385
+                # case1
 				$ns .= $nwords[$i]." ";
 				$nptn.=$p;
-				#my $role = $i == @nwords-1? "-":"_";
-				#$update += update($nwords[$i], "n", "", "wordpos");
+                print "[getNounsAfterPtn] case 1\n" if $getNounsAfterPtn_debug;
+                print "[getNounsAfterPtn] ns: $ns\n" if $getNounsAfterPtn_debug;
+                print "[getNounsAfterPtn] nptn: $nptn\n" if $getNounsAfterPtn_debug;
 			}else{
+                # case2
 				$bword = $nwords[$i];
+                print "[getNounsAfterPtn] case2\n" if $getNounsAfterPtn_debug;
+                print "[getNounsAfterPtn] bword: $bword\n" if $getNounsAfterPtn_debug;
 				last;
 			}
 		}
 	}
 	$ns =~ s#\s+$##g;
-	#if($ptn=~/^([psn]+)/){
-	#	my $end = $+[1]-1;
-	#	$nptn = substr($ptn, 0, $end+1);
-	#	$bword = $words[$end+1] if $end+1 < @words;
-	#	my @nwords = splice(@words, 0, $end+1);
-	#	$ns = join(" ", @nwords);
-	#}else{
-	#	$bword = $words[0];
-	#}
+
+    print "[getNounsAfterPtn] return ($ns, $nptn, $bword)\n" if $getNounsAfterPtn_debug;
 	return ($ns, $nptn, $bword);
 }
 
@@ -5152,25 +5709,37 @@ sub getroles{
   $modicount = $sth->fetchrow_array();
   return ($maincount, $modicount);
 }
+
 sub tag{
 	#my ($sentence, $tag) = @_;
 	my($sid, $tag) = @_;
+    
+    print "[tag]enter ($sid, $tag)\n" if $tag_debug;
+    
 	my $sth;
-	if($tag !~ /\w+/){return;}
+	if($tag !~ /\w+/){
+        print "[tag]case 1\n" if $tag_debug;
+        return;
+    }
 	if($tag =~ /^($stop)\b/){
-		print "\t:tag <$tag> starts with a stop word, ignore tagging requrest\n" if $debug;
+		print "[tag]\t:tag <$tag> starts with a stop word, ignore tagging requrest\n" if $debug;
+        print "[tag]case2\n" if $tag_debug;
 		return;
 	}
 	#$tag = lc $tag;
 	if($tag =~ /\w+/){
 		if(length($tag) > $taglength){
 			$tag = substr($tag, 0, $taglength);
-			print "\n tag <$tag> longer than $taglength\n";
+			print "[tag]\n tag <$tag> longer than $taglength\n";
 		}
 	   $sth = $dbh->prepare("update ".$prefix."_sentence set tag ='$tag' where sentid =$sid");
 	   $sth->execute();
-	   print "\t:mark up ".$sid." with tag $tag\n" if $debug;
+       print "[tag]case 3\n" if $tag_debug;
+	   print "[tag]\t:mark up ".$sid." with tag $tag\n" if $tag_debug;
+       return;
 	}
+    
+    print "[tag]case 4\n" if $tag_debug;
 }
 
 
@@ -5183,19 +5752,32 @@ sub discount{
 	my($word, $pos, $suggestedpos, $mode) =@_;
 	my ($sth1, $cu, $cl, $relatedword, $wordlist, $sth);
 	#also need to discount the related words if $word was the source word in prefix-based learning
+	# select words from unknownwords table who share same flag with $word - Dongye
 	$sth1 = $dbh->prepare("select word from ".$prefix."_unknownwords where flag = (select flag from ".$prefix."_unknownwords where word = '$word')");
 	$sth1->execute();
 	while(($relatedword) = $sth1->fetchrow_array()){
 		$wordlist .= "'".$relatedword."',";
 	}
+	# $word itself should be included as well - Dongye 
 	$wordlist .= "'".$word."'," if ($wordlist !~ /\b$word\b/);
 	chop($wordlist);
 	print "words related to $word to be discounted: $wordlist \n" if $debug;
 
+	# From wordPOS, select word, certaintyu, certaintyl of all the words who is in the wordlist, and whose pos is the one specified -Dongye
+	
+	# From wordPOS table, select all (word, oldPOS)
+	
 	#$sth1 = $dbh->prepare("select certaintyu, certaintyl from ".$prefix."_wordpos where word=\"$word\" and pos=\"$pos\"");
 	$sth1 = $dbh->prepare("select word, certaintyu, certaintyl from ".$prefix."_wordpos where word in ($wordlist) and pos='$pos'");
 	$sth1->execute() or print STDOUT "$sth1->errstr\n";
 	while(($word, $cu, $cl) = $sth1->fetchrow_array()){
+		# case 1: certaintyu less than 1, AND mode is "all"
+		#     1) Delete the entry from wordpos table
+		#     2) Update unknownwords
+		#     case 1.1 the pos is "s" or "p"
+		#         1) delete the entry from singularplural table as well
+		#     3) Insert it the (word, oldpos, newpos) into discounted table
+		# -Dongye
 		if(--$cu <= 0 || $mode eq "all"){
 			#remove this record from wordpos
 			$sth = $dbh->prepare("delete from ".$prefix."_wordpos where word = '$word' and pos='$pos' ");
@@ -5215,7 +5797,9 @@ sub discount{
 			$sth = $dbh->prepare("insert into ".$prefix."_discounted values ('$word', '$pos', '$suggestedpos')");
 			$sth->execute() or print STDOUT "$sth->errstr\n";
 		}else{
-			#update
+		# case 2: Other than case 1
+		#     
+			#set the certaintyU of (newWord,oldPOS) in wordPOS table
 			$sth = $dbh->prepare("update ".$prefix."_wordpos set certaintyu=$cu where word=\"$word\" and pos=\"$pos\" ");
 			$sth->execute() or print STDOUT "$sth->errstr\n";;
 		}
@@ -5225,16 +5809,39 @@ sub discount{
 #####for the nouns in @words, make the last n the main noun("-").
 #####update NN's roles
 #####return a positive number if an update is made,
+# tag the first n-1 words as modifier
 sub updatenn{
 	my($start,$end, @words) = @_;
+    
+if ($updatenn_debug) {
+	print "[updatenn]Enter ($start,$end, @words)\n";
+}    
+    
 	my ($update, $i, $sth1, $count);
 	@words = splice(@words, $start, $end-$start);#all Ns
+    
+print "[updatenn]Words after splice: @words\n" if $updatenn_debug;   
+    
 	for($i = 0; $i < @words-1; $i++){
 		#one N at a time
-    	$update += update($words[$i], "m", "", "modifiers", 1) if $words[$i] !~/\b($stop)\b/ and $words[$i] !~ /ly\s*$/ and $words[$i] !~ /\b($FORBIDDEN)\b/; #update modifier
+        
+print "[updatenn]Update N: $words[$i]\n" if $updatenn_debug;
+my ($tem);        
+        $tem = 0;
+    	$tem = update($words[$i], "m", "", "modifiers", 1) if $words[$i] !~/\b($stop)\b/ and $words[$i] !~ /ly\s*$/ and $words[$i] !~ /\b($FORBIDDEN)\b/; #update modifier
+        $update += $tem;
+print "[updatenn]update returned: $tem\n" if $updatenn_debug;
+        
 	}
 	#$update += update($words[$i], "n", "-"); #last one is the main noun
 	#$update += update(join(" ",@words), "n","") if @words >=2;#NN altogether
+	
+if ($updatenn_debug) {
+	print "[updatenn]Return: $update\n";
+	print "[updatenn]Quite updatenn\n";
+	print "\n";
+}	
+	
 	return $update;
 }
 
@@ -5278,8 +5885,10 @@ sub tovalue{
 #####return 1 if an update is made, otherwise 0;
 ### use markknown to replace updatePOS subroutine 11/20/08 Hong
 ### update =>markknown =>processnewword =>updatePOS
-sub update{
+sub update{	
 	my ($word, $pos, $role, $table, $increment) = @_; #("Base", "n", "_") or ("Base", "b", ""),
+	print "[update]enter ($word, $pos, $role, $table, $increment)\n" if $update_debug;
+	
 	my $new;
 	#$word = lc $word;
 	$word =~ s#<\S+?>##g; #remove tag from the word
@@ -5293,22 +5902,50 @@ sub update{
 	}
 
   $new += markknown($word, $pos, $role, $table, $increment);
+  
+print "[update]new1: $new\n" if $update_debug;  
+  
   if(!insingularpluralpair($word)){#add this condition 3/12/09 to eliminate reduandent computation
-	  if($pos eq "p"){
-	  	my $pl = $word;
+  
+print "[update] Word: $word, POS: $pos is NOT in singularplural pair\n" if $update_debug;  
+  
+	# case1
+	if($pos eq "p"){
+		my $pl = $word;
 	    $word = singular($word);
+	    
+print "[update] Get singular form of $pl: $word\n" if $update_debug;	    
+	    
 	    $new += markknown($word, "s", "*", $table, 0);#6/11/09 add "*" and 0: pos for those words are inferred based on other clues, not seen directly from the text
+        
+print "[update]new2: $new\n" if $update_debug;        
+        
 	    addsingularpluralpair($word, $pl);
-	  }
-	  if($pos eq "s"){
+
+print "[update] Added [Sigular: $word, Plural: $pl] into SingularPlural Table\n" if $update_debug;	 	    
+	    
+	}
+	# case 2
+	if($pos eq "s"){
 	    my @words = plural($word);
+	    
+print "[update] Get plural forms of $word: @words\n" if $update_debug;	    
+	    
 	    my $sg = $word;
 	    foreach my $w (@words){
 	      $new += markknown($w, "p", "*", $table, 0) if $w =~/\w/;
+          
+print "[update]new3: $new\n" if $update_debug;
+          
 	      addsingularpluralpair($sg, $w);
+	      
+print "[update] Added [Sigular: $sg, Plural: $w] into SingularPlural Table\n" if $update_debug;	      
+	      
 	    }
 	  }
   }
+  
+print "[update] Return: $new\n" if $update_debug;  
 
   return $new;
 }
@@ -5325,6 +5962,9 @@ sub insingularpluralpair{
 }
 
 sub addsingularpluralpair{
+	
+print "[addsingularpluralpair] Enter\n" if $addsingularpluralpair_debug;	
+	
 	my($sg, $pl) = @_;
 	my($sth);
 	$sth = $dbh->prepare("select * from ".$prefix."_singularplural where singular = '$sg' and plural ='$pl' ");
@@ -5332,52 +5972,114 @@ sub addsingularpluralpair{
 	if($sth->rows <= 0){
 		$sth = $dbh->prepare("insert into ".$prefix."_singularplural values ('$sg', '$pl')");
 		$sth->execute() or print STDOUT "$sth->errstr\n";
+		
+print "[addsingularpluralpair] Inserted ($sg, $pl)\n" if $addsingularpluralpair_debug;		
+		
 	}
+	
+print "[addsingularpluralpair] Quite\n\n" if $addsingularpluralpair_debug;	
+	
 }
 
 #p,s,b
 #the three sets are exclusive of one another
 sub updatePOS{
    my ($word, $pos, $role, $increment) = @_;
-   my ($sth1, $sth, $new, $oldpos, $oldrole, $certaintyu, $certaintyl, $newwordflag);
+   my ($sth1, $sth, $new, $oldword, $oldpos, $oldrole, $certaintyu, $certaintyl, $newwordflag);
+   
+print "[updatePOS]Enter updatePOS ($word, $pos, $role, $increment)\n" if $updatepos_debug;   
 
    if($word =~ /(\b|_)(NUM|$NUMBERS|$CLUSTERSTRINGS|$CHARACTER)\b/ and $pos =~/[nsp]/){
+   	print "[updatePOS]Word: $word"."\n" if $updatepos_debug;
+    print "[updatePOS]Regex: "."(\b|_)(NUM|$NUMBERS|$CLUSTERSTRINGS|$CHARACTER)\b"."\n" if $updatepos_debug;
+   	print "[updatePOS]Return 0!\n" if $updatepos_debug;
    	return 0;
+   }
+   
+   if ($updatepos_debug) {
+   my $myTestWord = "edf two abc";
+   print "[updatePOS]myTestWord: $myTestWord"."\n";
+   if ($myTestWord =~ /(\b|_)(NUM|$NUMBERS|$CLUSTERSTRINGS|$CHARACTER)\b/) {
+   	print "[updatePOS]Match!!!!!!!!!!!!!!!!!!!!!!!\n";
+   }
+   else {
+   	print "[updatePOS]NOT match!!!!!!!!!!!!!!!!!!!!!!11\n";
+   }
    }
 
 	$newwordflag = 1;
   	#updates should be in one transaction
-	$sth1 = $dbh->prepare("select pos, role, certaintyu, certaintyl from ".$prefix."_wordpos where word='$word' ");
+	$sth1 = $dbh->prepare("select word, pos, role, certaintyu, certaintyl, saved_flag, savedid from ".$prefix."_wordpos where word='$word' ");
 	$sth1->execute(); #return 1 record
-	($oldpos, $oldrole, $certaintyu) = $sth1->fetchrow_array();
+    my ($old_certaintyl, $old_saved_flag, $old_savedid);
+	($oldword, $oldpos, $oldrole, $certaintyu, $old_certaintyl, $old_saved_flag, $old_savedid) = $sth1->fetchrow_array();
+	
+if ($updatepos_debug) {
+	print "[updatePOS]\tOld Word: $oldword\n";
+	print "[updatePOS]\tOld POS: $oldpos\n";
+	print "[updatePOS]\tOld Role: $oldrole\n";
+	print "[updatePOS]\tOld CertaintyU: $certaintyu\n";
+    print "[updatePOS]\tOld CertaintyL: $old_certaintyl\n";
+    print "[updatePOS]\tOld Saved Flag: $old_saved_flag\n";
+    print "[updatePOS]\tOld SavedID: $old_savedid\n";
+}	
+	
 	#if($oldpos !~ /\w/){#new word
 	if(!defined $oldpos){#new word
+	
+  		print STDOUT "[updatePOS]case 1\n" if $updatepos_debug;	
+	
+		#Dongye
+  		print STDOUT "[updatePOS]certaintyu start\n" if $updatepos_debug;
+  		print STDOUT "[updatePOS]".$certaintyu if $updatepos_debug;
+  		print STDOUT "[updatePOS]certaintyu end\n" if $updatepos_debug;
+  		#Dongye
 		$certaintyu += $increment; #6/11/09 changed from = 1 to += $increment;
 		$sth = $dbh->prepare("insert into ".$prefix."_wordpos (word, pos, role, certaintyu, certaintyl) values('$word','$pos', '$role',$certaintyu, 0)" );
 	    $sth->execute();
+	    
+if ($wordpos_debug){    		
+    print "\t[updatePOS]Insert into WordPOS table\n";
+    print "\t\t[updatePOS]Word: $word\n";
+    print "\t\t[updatePOS]POS: $pos\n";
+    print "\t\t[updatePOS]Role: $role\n";
+}   	    
+	    
 		$new = 1;
-		print "\t: new [$word] pos=$pos, role =$role, certaintyu=$certaintyu\n" if $debug;
+		print "\t: new [$word] pos=$pos, role =$role, certaintyu=$certaintyu\n" if $updatepos_debug;
 	}elsif(($oldpos ne $pos) && ($oldpos eq "b" or $pos eq "b") ){ #different pos: b vs. s/p resolve conflicts,
+	
+  		print STDOUT "[updatePOS]\tcase 2.1\n" if $updatepos_debug;	
+	
 		my $otherpos = $pos ne "b" ? $pos : $oldpos;
 		$pos = resolveconflicts($word, "b", $otherpos);
 		#$role = $pos eq $oldpos? $oldrole : $role; #6/11/09 remove
 		if ($pos ne $oldpos){ #new pos win
+		
+		
+		
 			$role = $role eq "*" ? "" : $role;; #6/11/09 add
 			$new += changePOS($word, $oldpos, $pos, $role, $increment) ;
 		}else{ #old pos win
+		
+
+		
 			#$role = mergerole($oldrole, $role); #6/11/09
 			$role = $oldrole eq "*" ? $role : $oldrole;
 			$certaintyu += $increment; #change from +1 to +$increment
 			$sth = $dbh->prepare("update ".$prefix."_wordpos set role ='$role', certaintyu =$certaintyu where word='$word' and pos='$pos' ");
     		$sth->execute();
-			print "\t: update [$word($pos):a] role: $oldrole=>$role, certaintyu=$certaintyu\n" if $debug;
+			print "[updatePOS]\t: update [$word($pos):a] role: $oldrole=>$role, certaintyu=$certaintyu\n" if $updatepos_debug;
 		}
 	}else{#old and new pos are all [n],  update role and certaintyu
+	
+print STDOUT "[updatePOS]\tcase 2.2\n" if $updatepos_debug;			
+	
 		$role = mergerole($oldrole, $role);
 		$certaintyu += $increment; #change from +1 to +$increment
 		$sth = $dbh->prepare("update ".$prefix."_wordpos set role ='$role', certaintyu =$certaintyu where word='$word' and pos='$pos' ");
     	$sth->execute();
-		print "\t: update [$word($pos):b] role: $oldrole=>$role, certaintyu=$certaintyu\n" if $debug;
+		print "\t[updatePOS]: update [$word($pos):b] role: $oldrole=>$role, certaintyu=$certaintyu\n" if $updatepos_debug;
 	}
 
 	#update certaintyl = sum (certaintyu)
@@ -5386,8 +6088,10 @@ sub updatePOS{
 	($certaintyl) = $sth->fetchrow_array();
 	$sth = $dbh->prepare("update ".$prefix."_wordpos set certaintyl=$certaintyl where word='$word'");
     $sth->execute();
-	print "\t: total occurance of [$word] =$certaintyl\n" if $debug;
-  return $new;
+	print "\t[updatePOS]: total occurance of [$word] =$certaintyl\n" if $updatepos_debug;
+	
+	print "[updatePOS]Return: $new\n\n" if $updatepos_debug;
+    return $new;
 }
 
 #if $word appears after a pl in the corpus, return bpos, otherwise, return the other
@@ -5405,6 +6109,9 @@ sub resolveconflicts{
 				$count++;
 			}
 			if($count >= 1){
+				print "originalsent: ".$sentence."\n" if $resolveconflicts_debug;
+				print "Word: ".$word."\n" if $resolveconflicts_debug;
+				print "Return bpos: ".$bpos."\n" if $resolveconflicts_debug;
 				return $bpos;
 			}
 		}
@@ -5453,22 +6160,44 @@ sub resolveconflicts{
 #a role may be "*"
 sub mergerole{
 	my($role1, $role2) = @_;
+    print "[mergerole] enter($role1, $role2)\n" if $mergerole_debug;
+    
 
 	if($role1 eq "*"){
-		print "role * changed to $role2\n" if $debug;
+        # case 1
+        print "case 1\n" if $mergerole_debug;
+		print "role * changed to $role2\n" if $mergerole_debug;
+        print "return role2: $role2\n\n" if $mergerole_debug;
 	    return $role2;
 	}elsif($role2 eq "*"){
-		print "role * changed to $role1\n" if $debug;
+        # case 2
+        print "case 2\n" if $mergerole_debug;
+		print "role * changed to $role1\n" if $mergerole_debug;
+        print "return role1: $role1\n\n" if $mergerole_debug;
 	    return $role1;
 	}
 
 	if($role1 eq ""){
+        # case 3
+        print "case 3\n" if $mergerole_debug;
+        print "return role2: $role2\n\n" if $mergerole_debug;
 	    return $role2;
 	}elsif($role2 eq ""){
+        # case 4
+        print "case 4\n" if $mergerole_debug;
+        print "return role1: $role1\n\n" if $mergerole_debug;
 	    return $role1;
 	}elsif($role1 ne $role2){
-		return "+";
+        # case 5
+        print "case 5\n" if $mergerole_debug;
+        print "[mergerole] role1: $role1\n" if $mergerole_debug;
+        print "[mergerole] role2: $role2\n" if $mergerole_debug;
+        print "[mergerole] return +\n\n" if $mergerole_debug;
+        return "+";
 	}else{
+        # case 6
+        print "case 6\n" if $mergerole_debug;
+        print "return role1: $role1\n\n" if $mergerole_debug;
 		return $role1;
 	}
 	#before 6/11/09
@@ -5513,11 +6242,41 @@ sub mergerole{
 
 #always call getnumber to get number, not checkWN($word, "number").
 sub getnumber{
-  my $word = shift;
-  #$word = lc $word;
-  my $number = checkWN($word, "number");
-  return $number if $number =~/[sp]/;
-  return "" if $number=~/x/;
+    print "Enter getnumber:\n" if $getnumber_debug;
+    my $word = shift;
+    print "Word: $word\n" if $getnumber_debug;
+    #$word = lc $word;
+    my $number = checkWN($word, "number");
+    print "Number: $number\n" if $getnumber_debug; 
+
+	#dongye
+	if ($getnumber_debug){
+		print $word."\n";
+		print $number."\n";
+	}
+
+	#dongye
+	if ($getnumber_debug){
+		if ($number =~/[sp]/) {
+			print "case 1:\n";
+			print $word."\n";
+			print "Return: $number\n";
+		}
+	}
+    
+    return $number if $number =~/[sp]/;
+  
+	#dongye
+	if ($getnumber_debug){
+		if ($number=~/x/) {
+			print "case 2:\n";
+			print $word."\n";
+			print $number."\n";
+            print "Return: \n";
+		}
+	}
+    return "" if $number=~/x/;
+    
   if($word =~/i$/) {return "p";} #1.	Calyculi  => 1.	Calyculus, pappi => pappus
   if ($word =~ /ss$/){return "s";}
   if($word =~/ia$/) {return "p";}
@@ -5528,7 +6287,16 @@ sub getnumber{
   if ($word =~/us$/){return "s";}
   if($word =~ /es$/ || $word =~ /s$/){return "p";}
   if($word =~/ate$/){return "";} #3/12/09 good.
-  return "s";
+  
+    ####################################	
+	#dongye
+	if ($getnumber_debug){
+		print "case 3:\n";
+		print $word."\n";
+		print $number."\n";
+        print "Return: s\n";
+	}
+    return "s";
 }
 
 #####return pos string
@@ -5657,10 +6425,19 @@ sub buildwordpattern{
 ########e.g. /^(cat|dogs|fish)|^\w+\s(cat|dogs|fish)|^\w+\s\w+\s(cat|dogs|fish)/
 sub buildpattern{
 	my @words = @_;
+    
+if ($buildpattern_debug) {
+     print "[buildpattern]Enter buildPattern\n";
+     print "[buildpattern]Words:@words"."\n";
+     print "\n";
+}
+
 	my @newwords =();
 	my ($pattern, $tmp, $i);
-        my $prefix="\\w+\\s";
-	print ("CHECKEDWORDS is\n[$CHECKEDWORDS]\n") if $debug;
+    my $prefix="\\w+\\s";
+
+print ("[buildpattern]CHECKEDWORDS is\n[$CHECKEDWORDS]\n") if $buildpattern_debug;
+	
 	#identify new words
 	foreach (@words){
 		if($_!~ /[[:punct:]0-9]/ && $CHECKEDWORDS !~ /:$_:/i){
@@ -5668,12 +6445,23 @@ sub buildpattern{
 			push(@newwords,$_);
 		}
 	}
+	
+#print "[buildpattern]tmp: $tmp\n" if $buildpattern_debug;	
+	
 	if($tmp !~ /\w/){return "";}#no new words
 	#build pattern out of the new words
 	chop($tmp);
-	print ("Pattern segment: [$tmp]\n") if $debug;
+	
+#print "[buildpattern]After chop - tmp: $tmp\n" if $buildpattern_debug;		
+
 	$tmp = "\\b(?:".$tmp.")\\b";
+    
+#print ("[buildpattern]Pattern segment: [$tmp]\n") if $buildpattern_debug;
+    
 	$pattern ="^".$tmp."|";
+    
+#print ("[buildpattern]Pattern: [$pattern]\n") if $buildpattern_debug;    
+    
 	#$pattern =$tmp."|";
 	for($i = 0; $i < $N-1; $i++){
 		$tmp = $prefix.$tmp;
@@ -5681,10 +6469,24 @@ sub buildpattern{
 		#$pattern .=$tmp."|";
 		#^(?:cat|dogs|fish)|^\w+\s(?:cat|dogs|fish)|^\w+\s\w+\s(?:cat|dogs|fish)
 	}
+    
+#print ("[buildpattern]Pattern: [$pattern]\n") if $buildpattern_debug;        
+    
 	chop($pattern);
+    
+#print ("[buildpattern]Pattern: [$pattern]\n") if $buildpattern_debug;        
+    
 	$pattern = "(?:".$pattern.")";
-	print ("Pattern: [$pattern]\n") if $debug;
+    
+#print ("[buildpattern]Pattern: [$pattern]\n") if $buildpattern_debug;        
+    
 	$CHECKEDWORDS .= join(":",@newwords).":";
+    
+if ($buildpattern_debug) {
+    print "[buildpattern]Return Pattern:\n$pattern"."\n";
+    print "[buildpattern]Quit buildPattern\n\n";    
+}
+    
 	return $pattern;
 }
 
@@ -5694,136 +6496,193 @@ sub buildpattern{
 ######find "number" if a noun, return "p" [plural] or "s"[singular]; if not in WN ""; otherwise "x"
 ######find "pos":return n [p,s], v, a, r, or "" (not in WN);
 sub checkWN{
-  my ($word, $mode) = @_;
-  #$word = lc $word;
-  #check saved records
-  $word =~ s#\W##g; #remove non-word characters, such as <>
-  return "" if $word eq "";
-  my $singular = $WNSINGULAR{$word} if $mode eq "singular";
-  return $singular if $singular =~ /\w/;
-  my $number = $WNNUMBER{$word} if $mode eq "number";
-  return $number if $number =~ /\w/;
-  my $pos = $WNPOS{$word} if $mode eq "pos";
-  return $pos if $pos =~/\w/;
+    my ($word, $mode) = @_;
+	if ($checkWN_debug){
+		print "Enter checkWN\n";
+		print $word."\n";
+		print $mode."\n";
+	}
 
-  #special cases
-  if ($word eq "teeth"){
-    $WNNUMBER{"teeth"} = "p";
-    $WNSINGULAR{"teeth"} = "tooth";
-    return $mode eq "singular"? "tooth" : "p";
-  }
+	#check saved records
+	$word =~ s#\W##g; #remove non-word characters, such as <>
+	return "" if $word eq "";
+	my $singular = $WNSINGULAR{$word} if $mode eq "singular";
+	return $singular if $singular =~ /\w/;
+	my $number = $WNNUMBER{$word} if $mode eq "number";
+	return $number if $number =~ /\w/;
+	my $pos = $WNPOS{$word} if $mode eq "pos";
+	return $pos if $pos =~/\w/;
 
-  if ($word eq "tooth"){
-    $WNNUMBER{"tooth"} = "s";
-    $WNSINGULAR{"tooth"} = "tooth";
-    return $mode eq "singular"? "tooth" : "s";
-  }
+    #special cases
+    if ($word eq "teeth"){
+    	$WNNUMBER{"teeth"} = "p";
+    	$WNSINGULAR{"teeth"} = "tooth";
+    	return $mode eq "singular"? "tooth" : "p";
+    }
 
-  if ($word eq "NUM")
-  {
-    return $mode eq "singular"? "NUM" : "s";
-  }
+    if ($word eq "tooth"){
+      	$WNNUMBER{"tooth"} = "s";
+      	$WNSINGULAR{"tooth"} = "tooth";
+      	return $mode eq "singular"? "tooth" : "s";
+    }
 
-  if ($word eq "or"){
-    return $mode eq "singular"? "or" : "";
-   }
+    if ($word eq "NUM")
+    {
+      	return $mode eq "singular"? "NUM" : "s";
+  	}
 
-   if ($word eq "and"){
-    return $mode eq "singular"? "and" : "";
-  }
+	if ($word eq "or"){
+    	return $mode eq "singular"? "or" : "";
+   	}
 
-  if ($word =~ /[a-z]{3,}ly$/){#concentrically
-    return $word if $mode eq "singular";
-    return "" if $mode eq "number";
-    return "r" if $mode eq "pos";
-  }
+   	if ($word eq "and"){
+    	return $mode eq "singular"? "and" : "";
+  	}
 
-  #otherwise, call wn
-  my $result = `wn $word -over`;
-  if ($result !~/\w/){#word not in WN
-  	$WNPOSRECORDS{$word} = ""; #5/10/09
-  	#return $mode eq "singular"? $word : ""; #not in WN, return ""
-  	#remove any prefix and try again 3/12/09
-  	my $wordcopy = $word;
-  	$word =~ s#ed$##;
-  	if($word ne $wordcopy){ #$word not end with "ed"
-  		$result = `wn $word -over`;
-  		if($result =~ /\w/){ #$word end with "ed", what remains after removes "ed" is still a word
-  			return $word if $mode eq "singular";
-  			return "" if $mode eq "number";
-  			return "a" if $mode eq "pos";
+  	if ($word =~ /[a-z]{3,}ly$/){#concentrically
+    	return $word if $mode eq "singular";
+    	return "" if $mode eq "number";
+    	return "r" if $mode eq "pos";
+  	}
+
+  	#otherwise, call wn
+  	my $result = `wn $word -over`;
+  	# Case 1
+  	#word not in WN
+  	if ($result !~/\w/){  		
+  		$WNPOSRECORDS{$word} = ""; #5/10/09
+  		#return $mode eq "singular"? $word : ""; #not in WN, return ""
+  		#remove any prefix and try again 3/12/09
+  		my $wordcopy = $word;
+  		$word =~ s#ed$##;
+  		if($word ne $wordcopy){ #$word not end with "ed"
+  			$result = `wn $word -over`;
+  			if($result =~ /\w/){ #$word end with "ed", what remains after removes "ed" is still a word
+				if ($checkWN_debug){
+					print "case 1.1:\n";
+					print $word."\n";
+					print $mode."\n";
+				}
+  				return $word if $mode eq "singular";
+  				return "" if $mode eq "number";
+  				return "a" if $mode eq "pos";
+  			}
   		}
-
-  	}
-  	$word = $wordcopy;
-  	$word =~ s#^($PREFIX)+##;
-  	if($word eq $wordcopy){
-  		return $mode eq "singular"? $word : ""; #not in WN, return ""
-  	}else{
-  		$result = `wn $word -over`;
-  		$result =~ s#\b$word\b#$wordcopy#g;
   		$word = $wordcopy;
-  		return $mode eq "singular"? $word : "" if ($result !~/\w/);
+  		$word =~ s#^($PREFIX)+##;
+  		if($word eq $wordcopy){
+			if ($checkWN_debug){
+				print "case 1.2:\n";
+				print $word."\n";
+				print $mode."\n";
+			}
+			return $mode eq "singular"? $word : ""; #not in WN, return ""
+  		}
+  		else{
+  			$result = `wn $word -over`;
+  			$result =~ s#\b$word\b#$wordcopy#g;
+  			$word = $wordcopy;
+ 
+			if ($checkWN_debug){
+				print "case 1.3:\n";
+				print $word."\n";
+				print $mode."\n";
+			}
+			return $mode eq "singular"? $word : "" if ($result !~/\w/);
+  		}
   	}
-  }
 
-  #found $word in WN:
-  $result =~ s#\n# #g;
-  if($mode eq "singular" || $mode eq "number"){
-    my $t = "";
-    while($result =~/Overview of noun (\w+) (.*) /){
-         $t .= $1." ";
-         $result = $2;
-    }
-    if ($t !~ /\w/){#$word is not a noun
-    	#return "v";
-    	return $mode eq "singular"? $word : "x"; #is not a noun, return "x"
-    }
-    $t =~ s#\s+$##;
-    my @ts = split(/\s+/, $t);
-    ###select the singular between roots and root.   bases => basis and base?
-    if(@ts > 1){
-      my $l = 100;
-      print "Word $word has singular\n" if $debug;
-      foreach (@ts){
-       print "$_\n" if $debug;
-       # -um => a, -us => i?
-       if (length $_ < $l){
-          $t = $_;
-          $l = length $_;
-       }
-      }
-      print "The singular is $t\n" if $debug;
-    }
-    if ($t ne $word){
-       $WNSINGULAR{$word} = $t;
-       $WNNUMBER{$word} = "p";
-       return $mode eq "singular"? $t : "p";
-    }else{
-       $WNSINGULAR{$word} = $t;
-       $WNNUMBER{$word} = "s";
-       return $mode eq "singular"? $t : "s";
-    }
- }elsif($mode eq "pos"){
-   my $pos = "";
-   while($result =~/.*?Overview of ([a-z]*) (.*)/){
-         my $t = $1;
-         $result = $2;
-         $pos .= "n" if $t eq "noun";
-         $pos .= "v" if $t eq "verb";
-         $pos .= "a" if $t eq "adj";
-         $pos .= "r" if $t eq "adv";
+  	# Case 2
+  	#found $word in WN:
+  	$result =~ s#\n# #g;
+  	print "Result: $result\n" if $checkWN_debug;
+  	# case 2.1
+  	if($mode eq "singular" || $mode eq "number"){
+    	my $t = "";
+    	while($result =~/Overview of noun (\w+) (.*) /){
+         	$t .= $1." ";
+         	$result = $2;
+    	}
+    	print "t: $t\n" if $checkWN_debug;
+    	if ($t !~ /\w/){
+    	#$word is not a noun
+    		#return "v";
+			if ($checkWN_debug){
+				print "case 2.1.1:\n";
+				print $word."\n";
+				print $mode."\n";
+				if ($mode eq "singular") {
+					print "Return: $word\n\n";
+				}
+				else {
+					print "Return: x\n\n";
+				}
+			}
+    		return $mode eq "singular"? $word : "x"; #is not a noun, return "x"
+    	}
+    	$t =~ s#\s+$##;
+    	my @ts = split(/\s+/, $t);
+    	###select the singular between roots and root.   bases => basis and base?
+    	if(@ts > 1){
+      		my $l = 100;
+      		print "Word $word has singular\n" if $debug;
+      		foreach (@ts){
+       			print "$_\n" if $debug;
+       			# -um => a, -us => i?
+       			if (length $_ < $l){
+          			$t = $_;
+          			$l = length $_;
+       			}
+      		}
+      		print "The singular is $t\n" if $debug;
+    	}
+    	if ($t ne $word){
+       		$WNSINGULAR{$word} = $t;
+       		$WNNUMBER{$word} = "p";
+			if ($checkWN_debug){
+				print "case 2.1.2:\n";
+				print $word."\n";
+				print $mode."\n";
+			}
+       		return $mode eq "singular"? $t : "p";
+    	}
+    	else{
+       		$WNSINGULAR{$word} = $t;
+       		$WNNUMBER{$word} = "s";
+			if ($checkWN_debug){
+				print "case 2.1.3:\n";
+				print $word."\n";
+				print $mode."\n";
+			}
+       		return $mode eq "singular"? $t : "s";
+    	}
+ 	}
+ 	# case 2.2
+ 	elsif($mode eq "pos"){
+   		my $pos = "";
+   		while($result =~/.*?Overview of ([a-z]*) (.*)/){
+        	my $t = $1;
+         	$result = $2;
+         	$pos .= "n" if $t eq "noun";
+         	$pos .= "v" if $t eq "verb";
+         	$pos .= "a" if $t eq "adj";
+         	$pos .= "r" if $t eq "adv";
+    	}
+    	$WNPOSRECORDS{$word}=$pos;
+    	if($pos =~/n/ && $pos =~/v/ && $word=~/(ed|ing)$/){ #appearing is a nv, but set it v
+    		$pos =~ s#n##g;
+    	}
+    	$WNPOS{$word} = $pos;
+    	print "Wordnet Pos for $word is $pos\n" if $debug;
+		if ($checkWN_debug){
+			print "case 2.2:\n";
+			print $word."\n";
+			print $mode."\n";
+		}
+    	return $pos;
+  	}
+}
 
-    }
-    $WNPOSRECORDS{$word}=$pos;
-    if($pos =~/n/ && $pos =~/v/ && $word=~/(ed|ing)$/){ #appearing is a nv, but set it v
-    	$pos =~ s#n##g;
-    }
-    $WNPOS{$word} = $pos;
-    print "Wordnet Pos for $word is $pos\n" if $debug;
-    return $pos;
-  }
- }
 
  ##turn a singular word to its plural form
  ##check to make sure the plural form appeared in the text.
@@ -5835,56 +6694,166 @@ sub plural{
     my @pls = split(/ /, $plural);
     return @pls;
  }
+ 
+ if ($plural_debug) {
+ 	print "Enter plural\n";
+ 	print "Word: ".$word."\n";
+ }
 
  #special cases
  if($word =~ /series$/){
   $plural = $word;
+  if ($plural_debug) {
+  	print "Special case 1:\n";
+  	print "Word: ".$word."\n";
+  	print "Plural: ".$plural."\n";
+  }
  }elsif($word =~ /(.*?)foot$/){
   $plural = $1."feet";
+  if ($plural_debug) {
+  	print "Special case 2:\n";
+  	print "Word: ".$word."\n";
+  	print "Plural: ".$plural."\n";
+  }
  }elsif($word =~ /(.*?)tooth$/){
   $plural = $1."teeth";
+  if ($plural_debug) {
+  	print "Special case 3:\n";
+  	print "Word: ".$word."\n";
+  	print "Plural: ".$plural."\n";
+  }
  }elsif($word =~ /(.*?)alga$/){
   $plural = $1."algae";
+  if ($plural_debug) {
+  	print "Special case 4:\n";
+  	print "Word: ".$word."\n";
+  	print "Plural: ".$plural."\n";
+  }
  }elsif($word =~ /(.*?)genus$/){
   $plural = $1."genera";
+  if ($plural_debug) {
+  	print "Special case 5:\n";
+  	print "Word: ".$word."\n";
+  	print "Plural: ".$plural."\n";
+  }
  }elsif($word =~ /(.*?)corpus$/){
   $plural = $1."corpora";
+  if ($plural_debug) {
+  	print "Special case 6:\n";
+  	print "Word: ".$word."\n";
+  	print "Plural: ".$plural."\n";
+  }
  }else{
     #rules
     if($word =~ /(.*?)(ex|ix)$/){
       $plural = $1."ices"; #apex=>apices
       $plural .= " ".$1.$2."es";
+      if ($plural_debug) {
+      	print "Rule case 1:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }
     }elsif($word =~ /(x|ch|ss|sh)$/){
       $plural = $word."es";
+      if ($plural_debug) {
+      	print "Rule case 2:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*?)([^aeiouy])y$/){
       $plural = $1.$2."ies";
+      if ($plural_debug) {
+      	print "Rule case 3:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*?)(?:([^f])feï¿œ([oaelr])f)$/){
       $plural = $1.$2.$3."ves";
+      if ($plural_debug) {
+      	print "Rule case 4:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*?)(x|s)is$/){
       $plural = $1.$2."es";
+      if ($plural_debug) {
+      	print "Rule case 5:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*?)([tidlv])um$/){
       $plural = $1.$2."a";
+      if ($plural_debug) {
+      	print "Rule case 6:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*?)(ex|ix)$/){
       $plural = $1."ices"; #apex=>apices
+      if ($plural_debug) {
+      	print "Rule case 7:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*?[^t][^i])on$/){
       $plural = $1."a"; #taxon => taxa but not venation =>venatia
+      if ($plural_debug) {
+      	print "Rule case 8:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~/(.*?)a$/){
       $plural = $1."ae";
+      if ($plural_debug) {
+      	print "Rule case 9:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*?)man$/){
       $plural = $1."men";
+      if ($plural_debug) {
+      	print "Rule case 10:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*?)child$/){
       $plural = $1."children";
+      if ($plural_debug) {
+      	print "Rule case 11:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.*)status$/){
       $plural = $1."statuses";
+      if ($plural_debug) {
+      	print "Rule case 12:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~ /(.+?)us$/){
       $plural = $1."i";
       $plural .= " ".$1."uses";
+      if ($plural_debug) {
+      	print "Rule case 13:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }elsif($word =~/s$/){
       $plural = $word."es";
+      if ($plural_debug) {
+      	print "Rule case 14:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+      }      
     }
     $plural .= " ".$word."s"; #another choice
+    if ($plural_debug) {
+      	print "Default:\n";
+  		print "Word: ".$word."\n";
+  		print "Plural: ".$plural."\n";
+    } 
  }
-  print "$word plural is $plural\n" if $debug;
+  print "$word plural is $plural\n" if $plural_debug;
 
   $plural =~ s#^\s+##;
   $plural =~ s#\s+$##;
@@ -5897,7 +6866,7 @@ sub plural{
   }
   $plstring =~ s#\s+$##;
   $PLURALS{$word} = $plstring;
-  print "confirmed $word plural is *$plstring*\n" if $plstring=~/\w/ && $debug;
+  print "confirmed $word plural is *$plstring*\n" if $plstring=~/\w/ && $plural_debug;
   @pls = split(/ /, $plstring);
   return @pls;
 
@@ -5953,15 +6922,35 @@ sub hideBrackets{
 
 
 
-sub getCharsSents{
+sub getCharsSents{		
 	my ($file, $text);
-	my @all = ();
+	my @all = ();	
+
+	#my $dir1 = substr($dir, 1, -2);
+	#print STDOUT $dir1;
 	opendir(DIN, "$dir") || die "$!: $dir\n";#descriptions
-	while(defined ($file=readdir(DIN))){
-		if($file !~ /\w/){next;}
-		$text = ReadFile::readfile("$dir$file");
+	print "DIR: ".$dir."\n" if $populatesent_debug;
+	while(defined ($file=readdir(DIN))){	
+		#Dongye
+		#print "file:\n";
+	    #print STDOUT $file;
+	    #print STDOUT "\n";
+	    #Dongye
+		if($file !~ /\w/){
+			print "File: ".$file."\n" if $populatesent_debug;
+			next;}
+		#print STDOUT "\n$dir/$file";
+		$text = ReadFile::readfile("$dir$file");	
 		my $type = type($file);
 		my $info = $file."##".$type."##".$text;
+		#Dongye
+	    #print STDOUT $info;
+	    #print STDOUT "\n";	    
+	    #print STDOUT $type;
+	    #print STDOUT "\n";	    
+	    #print STDOUT $text;
+	    #print STDOUT "\n";
+	    #Dongye	
 		push(@all, $info);
 	}		
 #	characters have been copied to descriptions folder in CharacterStatementsTransformer.java 
@@ -5979,11 +6968,25 @@ sub getCharsSents{
 #determine if a file contains a character statement or a character state(description) statement
 sub type{
 	my $file = shift;
+	print "File: ".$file."\n" if $populatesent_type_debug;
 	#character: Armbruster_2004.xml_0a1e6749-13fc-47be-bc7f-8184fc9c26ad.txt
 	#character state: Armbruster_2004.xml_0a1e6749-13fc-47be-bc7f-8184fc9c26ad_4a99e866-54d9-4875-8b5e-385427db1245.txt
+	#Dongye
+	#print STDOUT $file;
+	#print STDOUT "haha\n";
 	$file =~ s#.*\.xml_##; #remove pdf.xml
+	print "After First Remove: ".$file."\n" if $populatesent_type_debug;
+	#print STDOUT $file;
+	#print STDOUT "haha\n";
 	$file =~ s#[^_]##g; #remove all non_ charaters
-	if(length($file)==1){ return "description";}
+	print "After Second Remove: ".$file."\n" if $populatesent_type_debug;
+	#print STDOUT $file;
+	#print STDOUT "haha\n";
+	if(length($file)==1){
+		print "This is a Description file\n\n" if $populatesent_type_debug;
+		return "description";
+	}
+	print "This is a Character file\n\n" if $populatesent_type_debug;
 	return "character";
 }
 
@@ -6025,6 +7028,7 @@ sub byseg{
 sub populatesents{
 my ($file, $type, $text, @sentences,@words,@tmp,$status,$lead,$stmt,$sth, $escaped, $original, $count);
 my @allsents = getCharsSents();
+#print STDOUT @allsents;
 foreach my $info (@allsents){
 	my @info = split(/##/, $info); #info has three parts, filename, type (character or description), and text content
 	$file = $info[0];
@@ -6054,6 +7058,10 @@ foreach my $info (@allsents){
   	$text =~ s#(\d\s+(cm|mm|dm|m)\s*)\.(\s+[^A-Z])#$1\[DOT\]$3#g;
   	
   	#@todo: use [PERIOD] replace . etc. in brackets. Replace back when dump to disk.
+  	#Dongye
+  	#print STDOUT $text;
+  	#print STDOUT "\n";
+  	#Dongye
 	@sentences = SentenceSpliter::get_sentences($text);#@todo: avoid splits in brackets. how? use hideBrackets.
 	#my @sentcopy = @sentences;
 	my @sentcopy = ();
@@ -6099,7 +7107,7 @@ foreach my $info (@allsents){
 		#my $oline = getOriginal($line, $original, $file);
 
     	my $line = $sentences[$_];
-    	my $oline = $sentcopy[$_];
+    	my $oline = $sentcopy[$_];#this is the sentence before remove "?,;,.,:" -Dongye
     	$oline =~ s#(\d)\s*\[\s*DOT\s*\]\s*(\d)#$1.$2#g;
     	$oline =~ s#\[\s*DOT\s*\]#.#g; #a space may have been introduced
 		$oline =~ s#\[\s*QST\s*\]#?#g;
@@ -6109,6 +7117,11 @@ foreach my $info (@allsents){
     	$line =~ s#'# #g; #remove all ' to avoid escape problems
     	$oline =~ s#'# #g;
     	@words = getfirstnwords($line, $N); # "w1 w2 w3"
+    	
+    	#print STDOUT "First n words\n" if $populatesent_debug;
+    	#print STDOUT @words if $populatesent_debug;
+    	#print STDOUT "End\n" if $populatesent_debug;
+    	
 
     	$status = "";
 		if(getnumber($words[0]) eq "p"){
@@ -6145,7 +7158,10 @@ foreach my $info (@allsents){
 	my $query = $dbh->prepare("insert into ".$prefix."_sentInFile values ('$file', $end)");
 	$query->execute() or print STDOUT $query->errstr."\n";
 }
+
+print "[populatesent]PEOPERNOUNS: $PROPERNOUNS\n" if $populatesent_debug;
 	chop($PROPERNOUNS);
+print "[populatesent]PEOPERNOUNS after chop: $PROPERNOUNS\n\n" if $populatesent_debug;    
 print "Total sentences = $SENTID\n";
 populateunknownwordstable();
 }
@@ -6181,6 +7197,9 @@ sub recordpropernouns{
 
 sub getallwords{
   my $sentence = shift;
+  
+print "[getallwords]enter ($sentence)\n"   if $getallwords_debug;
+  
   my @words = tokenize($sentence, "all");
   foreach my $w (@words){
     $WORDS{$w}++;
@@ -6192,14 +7211,17 @@ sub populateunknownwordstable{
 	foreach my $word (keys(%WORDS)){
 		#if(($word !~ /\w/)||($word =~ /_/ && $word !~/\b($FORBIDDEN)\b/ && $word !~ /\b($stop)\b/)){ #pistillate_zone
 		if($word !~ /\w/ || $word=~/ous$/){
+			print "Case 1:\n Word: ".$word."\n" if $populateunknownwordstable_debug;
 			$word = "\\".$word if $word eq "'";
 			$word = "\\".$word if $word eq "\\";
+			print "Word After Process: ".$word."\n" if $populateunknownwordstable_debug;
 			#print $word."\n";
 			#my $sth = $dbh->prepare("insert into ".$prefix."_unknownwords values ('$word', '$word')");
 			#$sth->execute() or print STDOUT $sth->errstr."\n";
 			insertintounknown($word, $word);
 			update($word, "b", "", "wordpos", 1);
 		}else{
+			print "Case 2:\n Word: ".$word."\n" if $populateunknownwordstable_debug;
 			insertintounknown($word, "unknown");
 			#my $sth = $dbh->prepare("insert into ".$prefix."_unknownwords values ('$word', 'unknown')");
 			#$sth->execute() or print STDOUT $sth->errstr."\n";
@@ -6224,10 +7246,19 @@ sub insertintounknown{
 sub getfirstnwords{
 	########return the first up to $n words of $sentence as an array, excluding
 	my($sentence, $n) = @_;
+    
+print "[getfirstnwords]enter ($sentence, $n)\n" if $getfirstnwords_debug;
+    
 	my (@words, $index, $w);
 	@words = tokenize($sentence, "firstseg");
+    
+print "[getfirstnwords]after tokenize: @words\n" if $getfirstnwords_debug;    
+    
 	#print "words in sentence: @words\n" if $debug;
 	@words = splice(@words, 0, $n);
+    
+print "[getfirstnwords]return @words\n\n" if $getfirstnwords_debug;    
+    
 	return @words;
 }
 
@@ -6268,22 +7299,49 @@ sub getOriginal{
 #mode: "all" , "firstseg"
 sub tokenize{
     my ($sentence, $mode) = @_;
+if ($tokenize_debug) {
+    print "[tokenize]Enter Tokenize\n";
+    print "[tokenize]\tSentence: $sentence\n";
+    print "[tokenize]\tMode: $mode\n";
+}
 	my ($index, @words, $temp1, $temp2);
     if($mode ne "all"){
     	$temp1 = length($sentence); #3/11/09
     	$temp2 = $temp1;#
+        
+        print "[tokenize]\tcase 1\n" if $tokenize_debug;
+        
     	if($sentence =~ / [,:;\.\[(]/){
 			$temp1 = $-[0];
 			#$index = $temp1;#
+            
+            print "[tokenize]\t\tcase 1.1- temp1: $temp1\n" if $tokenize_debug;                    
+            
 		}
 		if($sentence =~ /\b(?:$PREPOSITION)(\s)/){#3/1109
 			$temp2 = $-[1];
+            
+            print "[tokenize]\t\tcase 1.2- temp2: $temp2\n" if $tokenize_debug;        
+            
 		}
 		$index = $temp1 < $temp2? $temp1 : $temp2;#
-	}else{
-		$index = length($sentence);
+        print "[tokenize]\t\t$\n" if $tokenize_debug;
+        print "[tokenize]\ttemp1: $temp1\n" if $tokenize_debug;
+        print "[tokenize]\ttemp2: $temp2\n" if $tokenize_debug;
+        print "[tokenize]\tindex: $index\n" if $tokenize_debug;
 	}
+    else{         
+    
+		$index = length($sentence);
+        
+        print "[tokenize]\tcase 2- index: $index\n" if $tokenize_debug;   
+	}
+    
+    print "[tokenize]\tSentence2: $sentence\n" if $tokenize_debug;
+    
 	$sentence = substr($sentence, 0, $index);
+    
+    print "[tokenize]\tSentence3: $sentence\n" if $tokenize_debug;    
 
 	#$sentence =~ s#[[:punct:]]# #g; #remove all punct. marks
 	#$sentence =~ s#\W# #g; #keep punctuation marks in $lead
@@ -6291,7 +7349,23 @@ sub tokenize{
 	$sentence =~ s#\b($NUMBERS|_)+\b# NUM #g; #3/12/09
 	$sentence =~ s#\s+$##;
 	$sentence =~ s#^\s+##;
+    
+print "[tokenize]\tSentence4: $sentence\n" if $tokenize_debug;    
+    
 	@words = split(/\s+/, $sentence);
+    
+    my ($i);
+    for($i = 0; $i < @words; $i++){
+        print "[tokenize] word $i: $words[$i]\n" if $getNounsAfterPtn_debug;
+    }
+    
+if ($tokenize_debug) {
+    print "[tokenize]\tAfter Process, Sentence: $sentence\n";
+    print "[tokenize]\tWords: @words\n";
+    print "Quite tokenize\n";
+    print "\n";
+}    
+    
   	return @words;
 }
 
