@@ -4,8 +4,12 @@
 my $debug = 0; #debug learning process
 my $debug_trace = 0;
 
-my $use_fna2_v19_jing_sentence = 0;
-my $use_limit = 2000;
+my $use_fna2_v19_jing_sentence = 1;
+my $use_limit = 20000;
+my $range_start = 0;
+my $range_end = 1600;
+
+my $insert_into_wordpos = 0;
 
 my $populatesent_debug=0;
 my $tokenize_debug=0;
@@ -31,7 +35,8 @@ my $getplural_debug = 0;
 my $plural_debug = 0;
 my $singular_debug = 0;
 
-my $update_debug = 0;
+my $update_debug = 1;
+my $updatenn_debug = 1;
 my $processnewword_debug = 0;
 my $changePOS_debug = 0;
 my $markknown_debug = 0;
@@ -51,11 +56,10 @@ my $matchpattern_debug = 0;
 my $rulebasedlearn_debug = 1;
 
 #doit
-my $doit_debug = 0;
+my $doit_debug = 1;
 my $followedbyn_debug = 0;
-my $getPOSptn_debug = 0;
-my $updatenn_debug = 0;
-my $getNounsAfterPtn_debug = 0;
+my $getPOSptn_debug = 1;
+my $getNounsAfterPtn_debug = 1;
 
 #tag
 my $tag_debug = 0;
@@ -191,7 +195,7 @@ sub importingsents{
     or die "Program terminates unexpected due to: ".$dbh->errstr."\n";
     $sth->execute() or die $sth->errstr."\n";
     
-    $sth = $dbh->prepare("INSERT INTO ".$db.".".$prefix."_sentence (sentid, source, sentence, originalsent, lead, status) SELECT sentid, source, sentence, originalsent, lead, status FROM markedupdatasets.fna2_v19_jing_sentence limit $use_limit");
+    $sth = $dbh->prepare("INSERT INTO ".$db.".".$prefix."_sentence (sentid, source, sentence, originalsent, lead, status) SELECT sentid, source, sentence, originalsent, lead, status FROM markedupdatasets.fna2_v19_jing_sentence where sentid >= $range_start and sentid < $range_end");
     $sth->execute() or print STDOUT "$sth->errstr\n";
     
     $sth = $dbh->prepare("select sentid, source, originalsent from ".$db.".".$prefix."_sentence");
@@ -234,8 +238,6 @@ sub importingsents{
     
     populateunknownwordstable();
 }
-
-
 
 addheuristicsnouns();
 addstopwords();
@@ -747,7 +749,7 @@ sub addDescriptors{
 
 sub addNouns{
 	my @nouns = @_;
-	print "character heuristic nouns :\n@nouns\n" if $debug;
+	print "character heuristic nouns :\n@nouns\n" if $addheuristicsnouns_debug;
 	for (@nouns){
 		my $w = $_;
 		if($w =~/\b(?:$FORBIDDEN)\b/){next;}
@@ -5378,10 +5380,15 @@ print "updatenn returned $tem\n" if $doit_debug;
 		print "[doit]Found [[psn][psn]+] pattern\n" if $doit_debug;
 		#3/5/09: check the pattern for words following the ptn
 		$start = $-[1];
+        print "[doit]start: $start\n" if $doit_debug;
 		$end = $+[1]; #the last of the known noun
+        print "[doit]end: $end\n" if $doit_debug;
 		@cws = @ws; #make a copy of @ws
 
 		my ($moren, $moreptn, $bword) = getNounsAfterPtn($sentence, $end);
+        print "[doit]moren: $moren\n" if $doit_debug;
+        print "[doit]morenptn: $moreptn\n" if $doit_debug;
+        print "[doit]bword: $bword\n" if $doit_debug;
 		my @moren = split(/\s+/, $moren);
     	#if contain pp, take the last p as the tag
     	#otherwise, take the whole pattern
@@ -5398,8 +5405,9 @@ print "updatenn returned $tem\n" if $doit_debug;
     			my $ilastp = $isafterp-1;
     			my $safterp = $moren[$isafterp];
     			my $lastp = $ilastp >=0? $moren[$ilastp] : "";
-    			$bword = $safterp;
-    			$tag = $lastp =~/\w/ ? $lastp : $ws[rindex($ptn,"p")];
+    			$bword = $safterp; # the s is bword
+    			$tag = $lastp =~/\w/ ? $lastp : $ws[rindex($ptn,"p")]; # the last p is tag
+                # update bword
     			$sign += update($safterp,"b","", "wordpos", 1); #discount s to b
 			}
 			# case 5.1.2
@@ -5408,6 +5416,7 @@ print "updatenn returned $tem\n" if $doit_debug;
     			my $ilastp = $+[1];
     			$tag = $moren[$ilastp];
 			}
+            # case 5.1.3
             else{
             	print "[doit]Case 5.1.3\n" if $doit_debug;
     	   		my $i = rindex($ptn, "p");
@@ -5428,17 +5437,33 @@ print "updatenn returned $tem\n" if $doit_debug;
     	($pos, $role, $certainty) = ($t[0][0], $t[0][1], $t[0][2]);  #last n
 
     	if($pos=~/[psn]/){#3/15/09 relax this condition
-    		print "[doit]Case x: relax this condition\n" if $doit_debug;
+    		print "[doit]Case 5.x: relax this condition\n" if $doit_debug;
     		@t = split(/\s+/,$sentence);
     		$sign += update($bword,"b","", "wordpos", 1); #@todo:test
     		#update pos for each word in the ptn and morenptn
     		$ptn = substr($ptn, $start, $end-$start); #5/01/09
     		my $tptn = $ptn.$moreptn;#total pattern
+            print "[doit]\t:tptn: $tptn\n" if $doit_debug;
     		for(my $i = $start; $i < length($tptn); $i++){
-    			$sign += update($t[$i], substr($tptn, $i, 1), "_", "wordpos", 1) if $i != length($tptn) -1 ;
-    			$sign += update($t[$i], substr($tptn, $i, 1), "-", "wordpos", 1) if $i == length($tptn) -1 ;
+                if ($i != length($tptn) -1) { 
+                    my ($r1);
+                    $r1 = update($t[$i], substr($tptn, $i, 1), "_", "wordpos", 1);
+                    $sign += $r1;
+                    print "[doit]update(".$t[$i].", ".substr($tptn, $i, 1).", _, wordpos, 1), returned $r1\n" if $doit_debug;
+                }
+                if ($i == length($tptn) -1) {
+                    my ($r2);
+                    $r2 = update($t[$i], substr($tptn, $i, 1), "-", "wordpos", 1);
+                    $sign += $r2;
+                    print "[doit]update(".$t[$i].", ".substr($tptn, $i, 1).", -, wordpos, 1), returned $r2\n" if $doit_debug;
+                }
     		}
-			$sign += updatenn(0, length($tptn), @t) if @t > 1;
+            if (@t > 1) {
+                my ($r3);
+                $r3 = updatenn(0, length($tptn), @t);
+                $sign += $r3;
+                print "[doit]updatenn(0, ".length($tptn).", ".@t."), returned $r3\n" if $doit_debug;
+            }
     	}
    		print "[doit]\t:determine the tag: $tag\n" if $doit_debug;
 	}
@@ -6034,10 +6059,12 @@ if ($updatepos_debug) {
   		print STDOUT "[updatePOS]".$certaintyu if $updatepos_debug;
   		print STDOUT "[updatePOS]certaintyu end\n" if $updatepos_debug;
   		#Dongye
-		$certaintyu += $increment; #6/11/09 changed from = 1 to += $increment;
-		$sth = $dbh->prepare("insert into ".$prefix."_wordpos (word, pos, role, certaintyu, certaintyl) values('$word','$pos', '$role',$certaintyu, 0)" );
-	    $sth->execute();
-	    
+            $certaintyu += $increment; #6/11/09 changed from = 1 to += $increment;
+            #$sth = $dbh->prepare("insert into ".$prefix."_wordpos (word, pos, role, certaintyu, certaintyl) values('$word','$pos', '$role',$certaintyu, 0)" );
+            #$sth->execute();
+            insert_into_wordpos($word, $pos, $role, $certaintyu, 0);
+        
+            
 if ($wordpos_debug){    		
     print "\t[updatePOS]Insert into WordPOS table\n";
     print "\t\t[updatePOS]Word: $word\n";
@@ -6242,40 +6269,27 @@ sub mergerole{
 
 #always call getnumber to get number, not checkWN($word, "number").
 sub getnumber{
-    print "Enter getnumber:\n" if $getnumber_debug;
     my $word = shift;
-    print "Word: $word\n" if $getnumber_debug;
+    print "[getnumber]Enter ($word):\n" if $getnumber_debug;
+    $word =~ s#\W##g; #remove non-word characters, such as <>
     #$word = lc $word;
     my $number = checkWN($word, "number");
-    print "Number: $number\n" if $getnumber_debug; 
+    print "[getnumber]checkWN returned Number: $number\n" if $getnumber_debug; 
 
 	#dongye
-	if ($getnumber_debug){
-		print $word."\n";
-		print $number."\n";
-	}
-
-	#dongye
-	if ($getnumber_debug){
-		if ($number =~/[sp]/) {
-			print "case 1:\n";
-			print $word."\n";
-			print "Return: $number\n";
-		}
+	
+    if ($number =~/[sp]/) {
+        print "case 1: match [sp]\n" if $getnumber_debug;
+		print "Return: $number\n" if $getnumber_debug;
+        return $number;
 	}
     
-    return $number if $number =~/[sp]/;
-  
 	#dongye
-	if ($getnumber_debug){
-		if ($number=~/x/) {
-			print "case 2:\n";
-			print $word."\n";
-			print $number."\n";
-            print "Return: \n";
-		}
-	}
-    return "" if $number=~/x/;
+	if ($number=~/x/) {
+		print "case 2: match x\n"  if $getnumber_debug;
+        print "Return: empty string\n" if $getnumber_debug;
+        return "";
+    }
     
   if($word =~/i$/) {return "p";} #1.	Calyculi  => 1.	Calyculus, pappi => pappus
   if ($word =~ /ss$/){return "s";}
@@ -6286,14 +6300,16 @@ sub getnumber{
   if($word =~/^[aiu]s$/){return ""; }
   if ($word =~/us$/){return "s";}
   if($word =~ /es$/ || $word =~ /s$/){return "p";}
-  if($word =~/ate$/){return "";} #3/12/09 good.
+    if($word =~/ate$/) {
+        print "[getnumber]case 3.10: match ate\n";
+        print "[getnumber]return empty string\n";
+        return "";
+    } #3/12/09 good.
   
     ####################################	
 	#dongye
 	if ($getnumber_debug){
-		print "case 3:\n";
-		print $word."\n";
-		print $number."\n";
+		print "case 0:\n";
         print "Return: s\n";
 	}
     return "s";
@@ -7207,28 +7223,30 @@ print "[getallwords]enter ($sentence)\n"   if $getallwords_debug;
 }
 
 sub populateunknownwordstable{
+    print "[populateunknownwordstable]enter\n" if $populateunknownwordstable_debug;
 	my $count = 0;
 	foreach my $word (keys(%WORDS)){
 		#if(($word !~ /\w/)||($word =~ /_/ && $word !~/\b($FORBIDDEN)\b/ && $word !~ /\b($stop)\b/)){ #pistillate_zone
 		if($word !~ /\w/ || $word=~/ous$/){
-			print "Case 1:\n Word: ".$word."\n" if $populateunknownwordstable_debug;
+			print "[populateunknownwordstable]Case 1:\n Word: ".$word."\n" if $populateunknownwordstable_debug;
 			$word = "\\".$word if $word eq "'";
 			$word = "\\".$word if $word eq "\\";
-			print "Word After Process: ".$word."\n" if $populateunknownwordstable_debug;
+			print "[populateunknownwordstable]Word After Process: ".$word."\n" if $populateunknownwordstable_debug;
 			#print $word."\n";
 			#my $sth = $dbh->prepare("insert into ".$prefix."_unknownwords values ('$word', '$word')");
 			#$sth->execute() or print STDOUT $sth->errstr."\n";
 			insertintounknown($word, $word);
 			update($word, "b", "", "wordpos", 1);
 		}else{
-			print "Case 2:\n Word: ".$word."\n" if $populateunknownwordstable_debug;
+			print "[populateunknownwordstable]Case 2:\n Word: ".$word."\n" if $populateunknownwordstable_debug;
 			insertintounknown($word, "unknown");
 			#my $sth = $dbh->prepare("insert into ".$prefix."_unknownwords values ('$word', 'unknown')");
 			#$sth->execute() or print STDOUT $sth->errstr."\n";
 		}
 		$count++;
 	}
-	print "Total words = $count\n";
+	print "[populateunknownwordstable]Total words = $count\n";
+    print "[populateunknownwordstable]quite\n" if $populateunknownwordstable_debug;
 }
 
 sub insertintounknown{
@@ -7373,4 +7391,15 @@ sub trim{
 	my $term = shift;
 	$term =~ s#(^\s+|\s+$)##g;
 	return $term;
+}
+
+
+sub insert_into_wordpos {
+    my ($word, $pos, $role, $certaintyu, $certaintyl) = @_;
+    my ($sth);
+    
+    $sth = $dbh->prepare("insert into ".$prefix."_wordpos (word, pos, role, certaintyu, certaintyl) values('$word','$pos', '$role', $certaintyu, $certaintyl)" );
+	$sth->execute();
+    
+    print "[insert_into_wordpos]insert into ".$prefix."wordpos($word, $pos, $role, $certaintyu, $certaintyl)\n" if $insert_into_wordpos;
 }
