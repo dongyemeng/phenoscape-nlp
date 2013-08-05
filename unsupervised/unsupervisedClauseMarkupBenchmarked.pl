@@ -5426,6 +5426,7 @@ print "updatenn returned $tem\n" if $doit_debug;
        		#my $sth = $dbh->prepare("insert into ".$prefix."_isA (instance, class) values (\"".$tag."\",\"".$ws[$i-1]."\")");
        		#$sth->execute();
     	}
+        # Case 5.2
         else{#not pp
     		#the whole ptn + $moren
     		print "[doit]Case 5.2\n" if $doit_debug;
